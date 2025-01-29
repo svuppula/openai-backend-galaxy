@@ -1,0 +1,28 @@
+service: ai-api-service
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  memorySize: 2048
+  timeout: 30
+
+functions:
+  api:
+    handler: src/server/index.handler
+    events:
+      - http:
+          path: /{proxy+}
+          method: any
+          cors: true
+
+plugins:
+  - serverless-offline
+  - serverless-webpack
+
+custom:
+  webpack:
+    webpackConfig: webpack.config.js
+    packager: 'npm'
+    includeModules: true
