@@ -5,8 +5,9 @@ provider:
   runtime: nodejs18.x
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
-  memorySize: 2048
-  timeout: 30
+  memorySize: 1024 # Reduced from 2048 to stay within free tier
+  timeout: 29 # Set just under 30s to prevent timeouts
+  logRetentionInDays: 7 # Reduced log retention for cost savings
 
 functions:
   api:
@@ -16,6 +17,9 @@ functions:
           path: /{proxy+}
           method: any
           cors: true
+    environment:
+      NODE_ENV: production
+    reservedConcurrency: 100 # Limit concurrent executions
 
 plugins:
   - serverless-offline
@@ -26,3 +30,4 @@ custom:
     webpackConfig: webpack.config.js
     packager: 'npm'
     includeModules: true
+    excludeFiles: '**/*.test.js'
