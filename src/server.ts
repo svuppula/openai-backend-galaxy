@@ -10,7 +10,7 @@ import { initializeModels } from './server/models/aiModels';
 import { createAIRoutes } from './server/routes/aiRoutes';
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3000;
 
 const swaggerOptions = {
   definition: {
