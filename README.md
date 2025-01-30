@@ -1,69 +1,67 @@
-# Welcome to your Lovable project
+# AI API Service
 
-## Project info
+A powerful Express.js backend service for AI-powered features including speech-to-text and image recognition.
 
-**URL**: https://lovable.dev/projects/cb75e523-b841-491f-bb35-5fca4940f226
+## Features
 
-## How can I edit this code?
+- Speech to Text conversion
+- Image Recognition
+- Swagger API Documentation
+- Caching with Node-Cache
+- Rate Limiting
+- AWS Lambda ready
+- Clustering for improved performance
 
-There are several ways of editing your application.
+## Installation
 
-**Use Lovable**
+```bash
+# Install dependencies
+npm install
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/cb75e523-b841-491f-bb35-5fca4940f226) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start the development server
 npm run dev
+
+# For production
+npm start
 ```
 
-**Edit a file directly in GitHub**
+## API Documentation
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Once the server is running, visit:
+- Local: http://localhost:8080/api-docs
+- Production: https://your-production-url.com/api-docs
 
-**Use GitHub Codespaces**
+## Available Endpoints
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- POST `/api/speech-to-text`: Convert speech to text
+- POST `/api/image-recognition`: Recognize objects in images
+- GET `/health`: Health check endpoint
 
-## What technologies are used for this project?
+For detailed API documentation and testing, please use the Swagger UI interface.
 
-This project is built with .
+## Deployment
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+This service is configured for AWS Lambda deployment using the Serverless framework:
 
-## How can I deploy this project?
+```bash
+# Deploy to AWS Lambda
+npm run deploy
+```
 
-Simply open [Lovable](https://lovable.dev/projects/cb75e523-b841-491f-bb35-5fca4940f226) and click on Share -> Publish.
+## Environment Variables
 
-## I want to use a custom domain - is that possible?
+- `PORT`: Server port (default: 8080)
+- `NODE_ENV`: Environment ('development' or 'production')
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+## Performance
+
+The service includes:
+- Response caching
+- Rate limiting
+- Multi-core utilization through clustering
+- Compression
+- Security headers
+
+## License
+
+MIT

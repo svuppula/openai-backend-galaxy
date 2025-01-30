@@ -68,6 +68,8 @@
     "serverless-offline": "^14.4.0",
     "serverless-webpack": "^5.15.0",
     "sonner": "^1.5.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
     "ts-loader": "^9.5.2",
