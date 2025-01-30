@@ -10,6 +10,8 @@ export const createAIRoutes = (models: AIModels) => {
    * @swagger
    * /api/speech-to-text:
    *   post:
+   *     tags:
+   *       - AI Services
    *     summary: Convert speech to text
    *     description: Converts audio file to text using AI models
    *     requestBody:
@@ -55,6 +57,8 @@ export const createAIRoutes = (models: AIModels) => {
    * @swagger
    * /api/image-recognition:
    *   post:
+   *     tags:
+   *       - AI Services
    *     summary: Recognize objects in images
    *     description: Performs object recognition on provided image
    *     requestBody:

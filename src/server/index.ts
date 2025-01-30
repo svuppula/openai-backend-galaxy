@@ -45,7 +45,9 @@ const app = express();
 // Enhanced Middleware
 app.use(cors());
 app.use(compression());
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false // This is needed for Swagger UI to work properly
+}));
 app.use(limiter);
 app.use(express.json());
 app.use(morgan('combined'));
@@ -78,7 +80,7 @@ export { handler };
 
 // Start server based on environment
 if (process.env.NODE_ENV !== 'lambda') {
-  if (cluster.isMaster) {
+  if (cluster.isPrimary || cluster.isMaster) {
     const numCPUs = os.cpus().length;
     for (let i = 0; i < numCPUs; i++) {
       cluster.fork();
