@@ -6,8 +6,8 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import { initializeModels } from './server/models/aiModels';
-import { createAIRoutes } from './server/routes/aiRoutes';
+import { initializeModels } from './models/aiModels';
+import { createAIRoutes } from './routes/aiRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,7 +27,7 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: ['./src/server/routes/*.ts'], // path to API docs
+  apis: ['./src/routes/*.ts'], // Updated path to API docs
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
@@ -70,3 +70,5 @@ const init = async () => {
 };
 
 init();
+
+export default app;
