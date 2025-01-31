@@ -73,6 +73,7 @@
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
     "ts-loader": "^9.5.2",
+    "ts-node": "^10.9.2",
     "vaul": "^0.9.3",
     "webpack": "^5.97.1",
     "webpack-node-externals": "^3.0.0",

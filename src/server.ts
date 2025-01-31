@@ -27,7 +27,7 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: ['./src/server/routes/*.ts'],
+  apis: ['./src/server/routes/*.ts'], // path to API docs
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
@@ -45,8 +45,13 @@ app.use(rateLimit({
   max: 100
 }));
 
-// Swagger documentation
+// Swagger documentation route
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'healthy' });
+});
 
 // Initialize models and routes
 const init = async () => {
@@ -54,12 +59,9 @@ const init = async () => {
     const models = await initializeModels();
     app.use('/api', createAIRoutes(models));
     
-    app.get('/health', (req, res) => {
-      res.json({ status: 'healthy' });
-    });
-
     app.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);
+      console.log(`Swagger documentation available at http://localhost:${PORT}/api-docs`);
     });
   } catch (error) {
     console.error('Failed to initialize application:', error);
