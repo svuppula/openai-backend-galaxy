@@ -42,6 +42,9 @@ For detailed API documentation and testing, use the Swagger UI interface at `/ap
 # Start development server
 npm run dev
 
+# start local server
+npx ts-node --project tsconfig.server.json src/server.ts
+
 # Build for production
 npm run build
 
