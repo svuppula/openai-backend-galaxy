@@ -1,31 +1,31 @@
 import { Router } from 'express';
 import { AIModels } from '../models/aiModels';
 
-/**
- * @swagger
- * /api/speech-to-text:
- *   post:
- *     tags:
- *       - AI Services
- *     summary: Convert speech to text
- *     description: Converts audio file to text using AI models
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               audioUrl:
- *                 type: string
- *                 description: URL of the audio file to process
- *     responses:
- *       200:
- *         description: Successfully converted speech to text
- */
 export const createAIRoutes = (models: AIModels) => {
   const router = Router();
 
+  /**
+   * @swagger
+   * /api/speech-to-text:
+   *   post:
+   *     tags:
+   *       - AI Services
+   *     summary: Convert speech to text
+   *     description: Converts audio file to text using AI models
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               audioUrl:
+   *                 type: string
+   *                 description: URL of the audio file to process
+   *     responses:
+   *       200:
+   *         description: Successfully converted speech to text
+   */
   router.post('/speech-to-text', async (req, res) => {
     try {
       const { audioUrl } = req.body;

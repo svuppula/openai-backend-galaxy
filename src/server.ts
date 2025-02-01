@@ -32,7 +32,6 @@ const swaggerOptions = {
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
-// Middleware
 app.use(cors());
 app.use(compression());
 app.use(helmet({
@@ -45,15 +44,12 @@ app.use(rateLimit({
   max: 100
 }));
 
-// Swagger documentation route
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy' });
 });
 
-// Initialize models and routes
 const init = async () => {
   try {
     const models = await initializeModels();
