@@ -6,12 +6,13 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import { initializeModels } from './models/aiModels';
-import { createAIRoutes } from './routes/aiRoutes';
+import { aiRouter } from './routes/aiRoutes';
+import { cacheMiddleware, rateLimitMiddleware } from './server/middleware/cache';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Swagger configuration
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
@@ -32,6 +33,7 @@ const swaggerOptions = {
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
+// Middleware
 app.use(cors());
 app.use(compression());
 app.use(helmet({
@@ -39,32 +41,23 @@ app.use(helmet({
 }));
 app.use(express.json());
 app.use(morgan('combined'));
-app.use(rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100
-}));
+app.use(cacheMiddleware);
+app.use(rateLimitMiddleware);
 
+// Routes
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/api', aiRouter);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy' });
 });
 
-const init = async () => {
-  try {
-    const models = await initializeModels();
-    app.use('/api', createAIRoutes(models));
-    
-    app.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-      console.log(`Swagger documentation available at http://localhost:${PORT}/api-docs`);
-    });
-  } catch (error) {
-    console.error('Failed to initialize application:', error);
-    process.exit(1);
-  }
-};
-
-init();
+// Start server
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Swagger documentation available at http://localhost:${PORT}/api-docs`);
+  });
+}
 
 export default app;
