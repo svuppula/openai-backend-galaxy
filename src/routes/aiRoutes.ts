@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { AIModels } from '../models/aiModels';
+import { AIModels } from '../models/aiModels.js';
 
 export const createAIRoutes = (models: AIModels) => {
   const router = Router();

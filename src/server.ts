@@ -6,8 +6,8 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import { initializeModels } from './models/aiModels';
-import { createAIRoutes } from './routes/aiRoutes';
+import { initializeModels } from './models/aiModels.js';
+import { createAIRoutes } from './routes/aiRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
