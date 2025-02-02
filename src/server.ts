@@ -3,7 +3,6 @@ import cors from 'cors';
 import morgan from 'morgan';
 import compression from 'compression';
 import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import { aiRouter } from './routes/aiRoutes';

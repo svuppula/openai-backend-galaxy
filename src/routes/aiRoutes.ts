@@ -1,14 +1,15 @@
 import { Router } from 'express';
-import { pipeline } from '@huggingface/transformers';
+import { pipeline, Pipeline } from '@huggingface/transformers';
 import NodeCache from 'node-cache';
+import type { PipelineType } from '@huggingface/transformers';
 
 const aiRouter = Router();
 const cache = new NodeCache({ stdTTL: 3600 });
 
 // Initialize AI models
-const initializeModel = async (task: string) => {
+const initializeModel = async (task: PipelineType, model?: string) => {
   try {
-    return await pipeline(task);
+    return await pipeline(task, model);
   } catch (error) {
     console.error(`Error initializing ${task} model:`, error);
     throw error;
@@ -46,7 +47,7 @@ aiRouter.post('/speech-to-text', async (req, res) => {
       return res.json(cachedResult);
     }
 
-    const model = await initializeModel('automatic-speech-recognition');
+    const model = await initializeModel('automatic-speech-recognition', 'openai/whisper-small');
     const result = await model(audioUrl);
     
     cache.set(cacheKey, result);
@@ -88,7 +89,7 @@ aiRouter.post('/image-recognition', async (req, res) => {
       return res.json(cachedResult);
     }
 
-    const model = await initializeModel('image-classification');
+    const model = await initializeModel('image-classification', 'google/vit-base-patch16-224');
     const result = await model(imageUrl);
     
     cache.set(cacheKey, result);
