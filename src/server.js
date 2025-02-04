@@ -1,15 +1,20 @@
-import express from 'express';
-import cors from 'cors';
-import morgan from 'morgan';
-import compression from 'compression';
-import helmet from 'helmet';
-import swaggerJsdoc from 'swagger-jsdoc';
-import swaggerUi from 'swagger-ui-express';
-import { aiRouter } from './routes/aiRoutes';
-import { cacheMiddleware, rateLimitMiddleware } from './server/middleware/cache';
+const express = require('express');
+const cors = require('cors');
+const morgan = require('morgan');
+const compression = require('compression');
+const helmet = require('helmet');
+const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
+const NodeCache = require('node-cache');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Initialize cache
+const cache = new NodeCache({ 
+  stdTTL: 3600,
+  checkperiod: 120
+});
 
 // Swagger configuration
 const swaggerOptions = {
@@ -27,7 +32,7 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: ['./src/routes/*.ts'],
+  apis: ['./src/routes/*.js'],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
@@ -39,13 +44,54 @@ app.use(helmet({
   contentSecurityPolicy: false
 }));
 app.use(express.json());
-app.use(morgan('combined'));
-app.use(cacheMiddleware);
-app.use(rateLimitMiddleware);
+app.use(morgan('dev'));
+
+// Cache middleware
+const cacheMiddleware = (req, res, next) => {
+  if (req.method !== 'GET') return next();
+  
+  const key = req.originalUrl;
+  const cachedResponse = cache.get(key);
+  
+  if (cachedResponse) {
+    return res.json(cachedResponse);
+  }
+  next();
+};
 
 // Routes
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.use('/api', aiRouter);
+
+// AI Routes
+app.post('/api/speech-to-text', cacheMiddleware, async (req, res) => {
+  try {
+    const { audioUrl } = req.body;
+    if (!audioUrl) {
+      return res.status(400).json({ error: 'Audio URL is required' });
+    }
+    // Mock response for demo
+    const result = { text: "Speech to text conversion result" };
+    cache.set(req.originalUrl, result);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: 'Speech-to-text processing failed' });
+  }
+});
+
+app.post('/api/image-recognition', cacheMiddleware, async (req, res) => {
+  try {
+    const { imageUrl } = req.body;
+    if (!imageUrl) {
+      return res.status(400).json({ error: 'Image URL is required' });
+    }
+    // Mock response for demo
+    const result = { objects: ["object1", "object2"] };
+    cache.set(req.originalUrl, result);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: 'Image recognition failed' });
+  }
+});
 
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy' });
@@ -59,4 +105,4 @@ if (require.main === module) {
   });
 }
 
-export default app;
+module.exports = app;
