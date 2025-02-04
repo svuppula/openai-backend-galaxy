@@ -1,11 +1,11 @@
-const express = require('express');
-const cors = require('cors');
-const morgan = require('morgan');
-const compression = require('compression');
-const helmet = require('helmet');
-const swaggerJsdoc = require('swagger-jsdoc');
-const swaggerUi = require('swagger-ui-express');
-const NodeCache = require('node-cache');
+import express from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
+import compression from 'compression';
+import helmet from 'helmet';
+import swaggerJsdoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
+import NodeCache from 'node-cache';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -82,11 +82,11 @@ app.post('/api/image-recognition', async (req, res) => {
 });
 
 // Start server
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
     console.log(`Swagger documentation available at http://localhost:${PORT}/api-docs`);
   });
 }
 
-module.exports = app;
+export default app;

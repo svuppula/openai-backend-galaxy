@@ -26,27 +26,7 @@ PORT=3000
 NODE_ENV=development
 ```
 
-4. Start the development servers
-
-In one terminal, start the frontend:
-```bash
-npm run dev
-```
-
-In another terminal, start the backend:
-```bash
-npm run server
-```
-
-The application will be available at:
-- Frontend: http://localhost:8080
-- Backend API: http://localhost:3000
-- API Documentation: http://localhost:3000/api-docs
-
-## Important Note
-
-Before running the application, make sure to add the following scripts to your package.json:
-
+4. Add the following scripts to your package.json:
 ```json
 {
   "scripts": {
@@ -59,6 +39,33 @@ Before running the application, make sure to add the following scripts to your p
   }
 }
 ```
+
+5. Install development dependencies:
+```bash
+npm install -D nodemon concurrently
+```
+
+6. Start the development servers
+
+In one terminal, start the frontend:
+```bash
+npm run dev
+```
+
+In another terminal, start the backend:
+```bash
+npm run server
+```
+
+Or run both simultaneously:
+```bash
+npm run dev:all
+```
+
+The application will be available at:
+- Frontend: http://localhost:8080
+- Backend API: http://localhost:3000
+- API Documentation: http://localhost:3000/api-docs
 
 ## Available Endpoints
 
