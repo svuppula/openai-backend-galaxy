@@ -1,13 +1,12 @@
 import { Router } from 'express';
-import { pipeline, Pipeline } from '@huggingface/transformers';
+import { pipeline } from '@huggingface/transformers';
 import NodeCache from 'node-cache';
-import type { PipelineType } from '@huggingface/transformers';
 
 const aiRouter = Router();
 const cache = new NodeCache({ stdTTL: 3600 });
 
 // Initialize AI models
-const initializeModel = async (task: PipelineType, model?: string) => {
+const initializeModel = async (task, model) => {
   try {
     return await pipeline(task, model);
   } catch (error) {
@@ -18,9 +17,9 @@ const initializeModel = async (task: PipelineType, model?: string) => {
 
 /**
  * @swagger
- * /api/speech-to-text:
+ * /api/text-summarization:
  *   post:
- *     summary: Convert speech to text
+ *     summary: Summarize text
  *     requestBody:
  *       required: true
  *       content:
@@ -28,41 +27,41 @@ const initializeModel = async (task: PipelineType, model?: string) => {
  *           schema:
  *             type: object
  *             properties:
- *               audioUrl:
+ *               text:
  *                 type: string
  *     responses:
  *       200:
- *         description: Successful conversion
+ *         description: Successful summarization
  */
-aiRouter.post('/speech-to-text', async (req, res) => {
+aiRouter.post('/text-summarization', async (req, res) => {
   try {
-    const { audioUrl } = req.body;
-    if (!audioUrl) {
-      return res.status(400).json({ error: 'Audio URL is required' });
+    const { text } = req.body;
+    if (!text) {
+      return res.status(400).json({ error: 'Text is required' });
     }
 
-    const cacheKey = `speech_${audioUrl}`;
+    const cacheKey = `summary_${text.substring(0, 50)}`;
     const cachedResult = cache.get(cacheKey);
     if (cachedResult) {
       return res.json(cachedResult);
     }
 
-    const model = await initializeModel('automatic-speech-recognition', 'openai/whisper-small');
-    const result = await model(audioUrl);
+    const model = await initializeModel('summarization', 'facebook/bart-large-cnn');
+    const result = await model(text, { max_length: 130, min_length: 30 });
     
     cache.set(cacheKey, result);
     res.json(result);
   } catch (error) {
-    console.error('Speech-to-text error:', error);
-    res.status(500).json({ error: 'Speech-to-text processing failed' });
+    console.error('Text summarization error:', error);
+    res.status(500).json({ error: 'Text summarization failed' });
   }
 });
 
 /**
  * @swagger
- * /api/image-recognition:
+ * /api/script-generation:
  *   post:
- *     summary: Recognize objects in images
+ *     summary: Generate script from prompt
  *     requestBody:
  *       required: true
  *       content:
@@ -70,33 +69,159 @@ aiRouter.post('/speech-to-text', async (req, res) => {
  *           schema:
  *             type: object
  *             properties:
- *               imageUrl:
+ *               prompt:
  *                 type: string
  *     responses:
  *       200:
- *         description: Successful recognition
+ *         description: Successful script generation
  */
-aiRouter.post('/image-recognition', async (req, res) => {
+aiRouter.post('/script-generation', async (req, res) => {
   try {
-    const { imageUrl } = req.body;
-    if (!imageUrl) {
-      return res.status(400).json({ error: 'Image URL is required' });
+    const { prompt } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    const cacheKey = `image_${imageUrl}`;
+    const cacheKey = `script_${prompt.substring(0, 50)}`;
     const cachedResult = cache.get(cacheKey);
     if (cachedResult) {
       return res.json(cachedResult);
     }
 
-    const model = await initializeModel('image-classification', 'google/vit-base-patch16-224');
-    const result = await model(imageUrl);
+    const model = await initializeModel('text-generation', 'gpt2');
+    const result = await model(prompt, { max_length: 500 });
     
     cache.set(cacheKey, result);
-    res.json({ predictions: result });
+    res.json(result);
   } catch (error) {
-    console.error('Image recognition error:', error);
-    res.status(500).json({ error: 'Image recognition failed' });
+    console.error('Script generation error:', error);
+    res.status(500).json({ error: 'Script generation failed' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/text-to-speech:
+ *   post:
+ *     summary: Convert text to speech
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               text:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Successful text-to-speech conversion
+ */
+aiRouter.post('/text-to-speech', async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) {
+      return res.status(400).json({ error: 'Text is required' });
+    }
+
+    const cacheKey = `speech_${text.substring(0, 50)}`;
+    const cachedResult = cache.get(cacheKey);
+    if (cachedResult) {
+      return res.json(cachedResult);
+    }
+
+    const model = await initializeModel('text-to-speech', 'facebook/fastspeech2-en-ljspeech');
+    const result = await model(text);
+    
+    cache.set(cacheKey, result);
+    res.json(result);
+  } catch (error) {
+    console.error('Text-to-speech error:', error);
+    res.status(500).json({ error: 'Text-to-speech conversion failed' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/text-to-image:
+ *   post:
+ *     summary: Generate image from text
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               prompt:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Successful image generation
+ */
+aiRouter.post('/text-to-image', async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    const cacheKey = `image_${prompt.substring(0, 50)}`;
+    const cachedResult = cache.get(cacheKey);
+    if (cachedResult) {
+      return res.json(cachedResult);
+    }
+
+    const model = await initializeModel('text-to-image', 'stabilityai/stable-diffusion-2');
+    const result = await model(prompt);
+    
+    cache.set(cacheKey, result);
+    res.json(result);
+  } catch (error) {
+    console.error('Text-to-image error:', error);
+    res.status(500).json({ error: 'Image generation failed' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/text-to-video:
+ *   post:
+ *     summary: Generate video from text
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               prompt:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Successful video generation
+ */
+aiRouter.post('/text-to-video', async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    const cacheKey = `video_${prompt.substring(0, 50)}`;
+    const cachedResult = cache.get(cacheKey);
+    if (cachedResult) {
+      return res.json(cachedResult);
+    }
+
+    const model = await initializeModel('text-to-video', 'damo-vilab/text-to-video-ms-1.7b');
+    const result = await model(prompt);
+    
+    cache.set(cacheKey, result);
+    res.json(result);
+  } catch (error) {
+    console.error('Text-to-video error:', error);
+    res.status(500).json({ error: 'Video generation failed' });
   }
 });
 

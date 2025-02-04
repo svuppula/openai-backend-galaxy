@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import NodeCache from 'node-cache';
+import { aiRouter } from './routes/aiRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -47,7 +48,7 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.use('/health', (req, res) => {
   res.json({ status: 'healthy' });
 });
 
@@ -55,31 +56,7 @@ app.get('/health', (req, res) => {
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // AI Routes
-app.post('/api/speech-to-text', async (req, res) => {
-  try {
-    const { audioUrl } = req.body;
-    if (!audioUrl) {
-      return res.status(400).json({ error: 'Audio URL is required' });
-    }
-    // Mock response for demo
-    res.json({ text: "Speech to text conversion result" });
-  } catch (error) {
-    res.status(500).json({ error: 'Speech-to-text processing failed' });
-  }
-});
-
-app.post('/api/image-recognition', async (req, res) => {
-  try {
-    const { imageUrl } = req.body;
-    if (!imageUrl) {
-      return res.status(400).json({ error: 'Image URL is required' });
-    }
-    // Mock response for demo
-    res.json({ objects: ["object1", "object2"] });
-  } catch (error) {
-    res.status(500).json({ error: 'Image recognition failed' });
-  }
-});
+app.use('/api', aiRouter);
 
 // Start server
 if (import.meta.url === `file://${process.argv[1]}`) {
