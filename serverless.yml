@@ -5,13 +5,13 @@ provider:
   runtime: nodejs18.x
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
-  memorySize: 1024 # Reduced from 2048 to stay within free tier
-  timeout: 29 # Set just under 30s to prevent timeouts
-  logRetentionInDays: 7 # Reduced log retention for cost savings
+  memorySize: 1024
+  timeout: 29
+  logRetentionInDays: 7
 
 functions:
   api:
-    handler: src/server/index.handler
+    handler: src/server.js
     events:
       - http:
           path: /{proxy+}
@@ -19,7 +19,7 @@ functions:
           cors: true
     environment:
       NODE_ENV: production
-    reservedConcurrency: 100 # Limit concurrent executions
+    reservedConcurrency: 100
 
 plugins:
   - serverless-offline
@@ -31,3 +31,7 @@ custom:
     packager: 'npm'
     includeModules: true
     excludeFiles: '**/*.test.js'
+
+  serverless-offline:
+    httpPort: 3000
+    noPrependStageInUrl: true
