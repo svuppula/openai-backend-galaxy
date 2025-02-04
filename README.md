@@ -2,6 +2,11 @@
 
 A powerful Express.js backend service for AI-powered features including speech-to-text and image recognition.
 
+## Prerequisites
+
+- Node.js (v14 or higher)
+- npm (v6 or higher)
+
 ## Quick Start
 
 1. Clone the repository
@@ -15,7 +20,13 @@ cd ai-api-service
 npm install
 ```
 
-3. Start the development servers
+3. Create a `.env` file in the root directory:
+```
+PORT=3000
+NODE_ENV=development
+```
+
+4. Start the development servers
 
 In one terminal, start the frontend:
 ```bash
@@ -32,26 +43,22 @@ The application will be available at:
 - Backend API: http://localhost:3000
 - API Documentation: http://localhost:3000/api-docs
 
-## Available Scripts
+## Important Note
 
-- `npm run dev`: Start the frontend development server
-- `npm run server`: Start the backend server
-- `npm run build`: Build for production
-- `npm run preview`: Preview production build
+Before running the application, make sure to add the following scripts to your package.json:
 
-## Environment Variables
-
-Create a `.env` file in the root directory with:
+```json
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:dev": "vite build --mode development",
+    "preview": "vite preview",
+    "server": "nodemon src/server.js",
+    "dev:all": "concurrently \"npm run dev\" \"npm run server\""
+  }
+}
 ```
-PORT=3000
-NODE_ENV=development
-```
-
-## API Documentation
-
-Access the Swagger documentation at:
-- Local: http://localhost:3000/api-docs
-- Production: https://your-production-url.com/api-docs
 
 ## Available Endpoints
 
