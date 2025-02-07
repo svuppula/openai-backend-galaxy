@@ -1,21 +1,35 @@
-import { Ollama } from 'ollama-node';
 import { pipeline } from '@huggingface/transformers';
+import { Ollama } from 'ollama-node';
 
 const ollama = new Ollama();
+
+const checkOllamaConnection = async () => {
+  try {
+    await ollama.list();
+    return true;
+  } catch (error) {
+    console.warn('Ollama connection failed, using fallback options:', error.message);
+    return false;
+  }
+};
 
 export const initializeModels = async () => {
   try {
     console.log('Initializing AI models...');
     
-    // Initialize local models
-    await ollama.create({
-      name: 'deepseek-r1',
-      model: 'deepseek-coder:6.7b',
-      options: {
-        temperature: 0.7,
-        top_p: 0.9
-      }
-    });
+    const isOllamaAvailable = await checkOllamaConnection();
+    
+    if (isOllamaAvailable) {
+      // Initialize local models if Ollama is available
+      await ollama.create({
+        name: 'deepseek-r1',
+        model: 'deepseek-coder:6.7b',
+        options: {
+          temperature: 0.7,
+          top_p: 0.9
+        }
+      });
+    }
 
     // Initialize HuggingFace pipelines
     const textToSpeech = await pipeline('text-to-speech', 'microsoft/speecht5_tts');
@@ -23,10 +37,11 @@ export const initializeModels = async () => {
     const textToVideo = await pipeline('text-to-video', 'damo-vilab/text-to-video-ms-1.7b');
 
     return {
-      ollama,
+      ollama: isOllamaAvailable ? ollama : null,
       textToSpeech,
       textToImage,
-      textToVideo
+      textToVideo,
+      isOllamaAvailable
     };
   } catch (error) {
     console.error('Error initializing models:', error);
@@ -34,28 +49,42 @@ export const initializeModels = async () => {
   }
 };
 
-export const summarizeText = async (text) => {
+export const summarizeText = async (text, models) => {
   try {
-    const response = await ollama.generate({
-      model: 'deepseek-r1',
-      prompt: `Summarize the following text:\n${text}`,
-      max_tokens: 500
-    });
-    return response.text;
+    if (models.isOllamaAvailable) {
+      const response = await models.ollama.generate({
+        model: 'deepseek-r1',
+        prompt: `Summarize the following text:\n${text}`,
+        max_tokens: 500
+      });
+      return response.text;
+    } else {
+      // Fallback to HuggingFace pipeline
+      const summarizer = await pipeline('summarization');
+      const result = await summarizer(text);
+      return result[0].summary_text;
+    }
   } catch (error) {
     console.error('Text summarization error:', error);
     throw error;
   }
 };
 
-export const generateScript = async (prompt) => {
+export const generateScript = async (prompt, models) => {
   try {
-    const response = await ollama.generate({
-      model: 'deepseek-r1',
-      prompt: `Generate a script based on this prompt:\n${prompt}`,
-      max_tokens: 1000
-    });
-    return response.text;
+    if (models.isOllamaAvailable) {
+      const response = await models.ollama.generate({
+        model: 'deepseek-r1',
+        prompt: `Generate a script based on this prompt:\n${prompt}`,
+        max_tokens: 1000
+      });
+      return response.text;
+    } else {
+      // Fallback to HuggingFace pipeline
+      const generator = await pipeline('text-generation');
+      const result = await generator(prompt);
+      return result[0].generated_text;
+    }
   } catch (error) {
     console.error('Script generation error:', error);
     throw error;
