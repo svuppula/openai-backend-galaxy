@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { textToSpeech, textToImage, textToVideo } from '../services/mediaService.js';
+import { textToSpeech, textToImage } from '../services/mediaService.js';
 import { cacheMiddleware } from '../middleware/cache.js';
 
 const mediaRouter = Router();
