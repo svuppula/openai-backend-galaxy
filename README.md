@@ -1,21 +1,21 @@
 # AI API Service
 
-A powerful Express.js backend service for AI-powered features including speech-to-text and image recognition.
+A powerful Express.js backend service for AI-powered features including text summarization, script generation, and media generation.
 
 ## Prerequisites
 
-- Node.js (v14 or higher)
-- npm (v6 or higher)
+- Node.js (v18 or higher)
+- npm (v8 or higher)
 
-## Quick Start
+## Installation
 
-1. Clone the repository
+1. Clone the repository:
 ```bash
 git clone <your-repo-url>
 cd ai-api-service
 ```
 
-2. Install dependencies
+2. Install dependencies:
 ```bash
 npm install
 ```
@@ -26,52 +26,43 @@ PORT=3000
 NODE_ENV=development
 ```
 
-4. Add the following scripts to your package.json:
-```json
-{
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "build:dev": "vite build --mode development",
-    "preview": "vite preview",
-    "server": "nodemon src/server.js",
-    "dev:all": "concurrently \"npm run dev\" \"npm run server\""
-  }
-}
-```
+## Running the Application
 
-5. Install development dependencies:
-```bash
-npm install -D nodemon concurrently
-```
-
-6. Start the development servers
-
-In one terminal, start the frontend:
-```bash
-npm run dev
-```
-
-In another terminal, start the backend:
+1. Start the development server:
 ```bash
 npm run server
 ```
 
-Or run both simultaneously:
-```bash
-npm run dev:all
-```
-
 The application will be available at:
-- Frontend: http://localhost:8080
-- Backend API: http://localhost:3000
+- API Server: http://localhost:3000
 - API Documentation: http://localhost:3000/api-docs
 
 ## Available Endpoints
 
-- POST `/api/speech-to-text`: Convert speech to text
-- POST `/api/image-recognition`: Recognize objects in images
-- GET `/health`: Health check endpoint
+### Text Services
+- POST `/api/text/summarize`: Summarize text using AI
+- POST `/api/text/generate-script`: Generate a script from a prompt
+
+### Media Services
+- POST `/api/media/text-to-speech`: Convert text to speech
+- POST `/api/media/text-to-image`: Generate images from text descriptions
+
+## Testing the APIs
+
+1. Open http://localhost:3000/api-docs in your browser
+2. Use the Swagger UI to test each endpoint
+3. Each endpoint accepts JSON payloads with the required parameters
+
+## Error Handling
+
+The API includes comprehensive error handling:
+- Input validation
+- Model initialization errors
+- Processing errors
+
+## Caching
+
+The service includes automatic caching for all endpoints to improve performance.
 
 ## License
 
