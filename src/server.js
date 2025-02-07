@@ -24,7 +24,7 @@ const swaggerOptions = {
     info: {
       title: 'AI API Service',
       version: '1.0.0',
-      description: 'API documentation for AI services',
+      description: 'API documentation for AI services including text summarization, script generation, and media generation',
     },
     servers: [
       {
@@ -48,7 +48,7 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 // Health check endpoint
-app.use('/health', (req, res) => {
+app.get('/health', (req, res) => {
   res.json({ status: 'healthy' });
 });
 
@@ -59,11 +59,9 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api', aiRouter);
 
 // Start server
-if (import.meta.url === `file://${process.argv[1]}`) {
-  app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-    console.log(`Swagger documentation available at http://localhost:${PORT}/api-docs`);
-  });
-}
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Swagger documentation available at http://localhost:${PORT}/api-docs`);
+});
 
 export default app;

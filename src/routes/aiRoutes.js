@@ -23,6 +23,35 @@ let models;
   }
 })();
 
+/**
+ * @swagger
+ * /api/text-summarization:
+ *   post:
+ *     summary: Summarize text using AI
+ *     tags: [AI Services]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - text
+ *             properties:
+ *               text:
+ *                 type: string
+ *                 description: The text to summarize
+ *     responses:
+ *       200:
+ *         description: Successfully summarized text
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 summary:
+ *                   type: string
+ */
 aiRouter.post('/text-summarization', async (req, res) => {
   try {
     const { text } = req.body;
@@ -45,6 +74,35 @@ aiRouter.post('/text-summarization', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/script-generation:
+ *   post:
+ *     summary: Generate a script using AI
+ *     tags: [AI Services]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - prompt
+ *             properties:
+ *               prompt:
+ *                 type: string
+ *                 description: The prompt for script generation
+ *     responses:
+ *       200:
+ *         description: Successfully generated script
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 script:
+ *                   type: string
+ */
 aiRouter.post('/script-generation', async (req, res) => {
   try {
     const { prompt } = req.body;
@@ -67,6 +125,36 @@ aiRouter.post('/script-generation', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/text-to-speech:
+ *   post:
+ *     summary: Convert text to speech using AI
+ *     tags: [AI Services]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - text
+ *             properties:
+ *               text:
+ *                 type: string
+ *                 description: The text to convert to speech
+ *     responses:
+ *       200:
+ *         description: Successfully converted text to speech
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 audioData:
+ *                   type: string
+ *                   format: binary
+ */
 aiRouter.post('/text-to-speech', async (req, res) => {
   try {
     const { text } = req.body;
@@ -89,6 +177,36 @@ aiRouter.post('/text-to-speech', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/text-to-image:
+ *   post:
+ *     summary: Generate an image from text using AI
+ *     tags: [AI Services]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - prompt
+ *             properties:
+ *               prompt:
+ *                 type: string
+ *                 description: The text prompt for image generation
+ *     responses:
+ *       200:
+ *         description: Successfully generated image
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 image:
+ *                   type: string
+ *                   format: binary
+ */
 aiRouter.post('/text-to-image', async (req, res) => {
   try {
     const { prompt } = req.body;
@@ -111,6 +229,36 @@ aiRouter.post('/text-to-image', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/text-to-video:
+ *   post:
+ *     summary: Generate a video from text using AI
+ *     tags: [AI Services]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - prompt
+ *             properties:
+ *               prompt:
+ *                 type: string
+ *                 description: The text prompt for video generation
+ *     responses:
+ *       200:
+ *         description: Successfully generated video
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 video:
+ *                   type: string
+ *                   format: binary
+ */
 aiRouter.post('/text-to-video', async (req, res) => {
   try {
     const { prompt } = req.body;
