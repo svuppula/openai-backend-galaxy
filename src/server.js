@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import { textRouter } from './routes/textRoutes.js';
+import { aiRouter } from './routes/aiRoutes.js';
 import { initializeModels } from './services/aiService.js';
 
 const app = express();
@@ -54,6 +55,7 @@ app.use(morgan('dev'));
 
 // Routes
 app.use('/api', textRouter);
+app.use('/api', aiRouter); // Mount AI routes
 
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
