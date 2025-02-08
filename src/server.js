@@ -39,9 +39,16 @@ app.use(morgan('dev'));
 // Initialize AI models
 (async () => {
   try {
-    await initializeModels();
+    const initialized = await initializeModels();
+    if (!initialized) {
+      console.log('⚠️ Running in fallback mode. To enable AI features:');
+      console.log('1. Install Ollama from https://ollama.ai');
+      console.log('2. Run: ollama serve');
+      console.log('3. Restart this server');
+    }
   } catch (error) {
     console.error('Failed to initialize models:', error);
+    console.log('⚠️ Running in fallback mode');
   }
 })();
 
