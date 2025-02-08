@@ -6,6 +6,7 @@ import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import { textRouter } from './routes/textRoutes.js';
 import { aiRouter } from './routes/aiRoutes.js';
+import { mediaRouter } from './routes/mediaRoutes.js';
 import { initializeModels } from './services/aiService.js';
 
 const app = express();
@@ -16,9 +17,9 @@ const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'AI Text Generation API',
+      title: 'AI Services API',
       version: '1.0.0',
-      description: 'API documentation for AI text generation services',
+      description: 'API documentation for AI text generation and media services',
     },
     servers: [
       {
@@ -55,7 +56,8 @@ app.use(morgan('dev'));
 
 // Routes
 app.use('/api', textRouter);
-app.use('/api', aiRouter); // Mount AI routes
+app.use('/api', aiRouter);
+app.use('/api', mediaRouter); // Mount media routes
 
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
