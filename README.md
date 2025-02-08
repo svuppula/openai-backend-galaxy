@@ -1,7 +1,7 @@
 
-# AI API Service
+# AI Text Generation API
 
-A powerful Express.js backend service for AI-powered features using local Deepseek models.
+A powerful Express.js backend service for AI-powered text generation using local Deepseek models.
 
 ## Prerequisites
 
@@ -13,30 +13,27 @@ A powerful Express.js backend service for AI-powered features using local Deepse
 
 1. Install Ollama from https://ollama.ai/
 
-2. Pull the Deepseek model:
-```bash
-ollama pull deepseek-coder:6.7b
-```
-
-3. Clone the repository:
+2. Clone the repository:
 ```bash
 git clone <your-repo-url>
-cd ai-api-service
+cd ai-text-generation-api
 ```
 
-4. Install dependencies:
+3. Install dependencies:
 ```bash
 npm install
 ```
 
-## Running the Application
-
-1. Start Ollama service (in a separate terminal):
+4. Start Ollama (in a separate terminal):
 ```bash
 ollama serve
 ```
 
-2. Start the development server:
+The first time you run the application, it will automatically download the required Deepseek model. This may take a few minutes depending on your internet connection.
+
+## Running the Application
+
+1. Start the development server:
 ```bash
 npm run server
 ```
@@ -48,25 +45,40 @@ The application will be available at:
 ## Available Endpoints
 
 ### Text Services
-- POST `/api/text-summarization`: Summarize text using AI
-- POST `/api/script-generation`: Generate a script from a prompt
+- POST `/api/text/summarize`: Summarize text using AI
+  - Request body: `{ "text": "Text to summarize" }`
+  - Response: `{ "summary": "Summarized text" }`
+
+- POST `/api/text/generate`: Generate a script or story from a prompt
+  - Request body: `{ "prompt": "Your creative prompt" }`
+  - Response: `{ "script": "Generated story/script" }`
 
 ## Testing the APIs
 
-1. Open http://localhost:3000/api-docs in your browser
-2. Use the Swagger UI to test each endpoint
-3. Each endpoint accepts JSON payloads with the required parameters
+1. Ensure Ollama is running (`ollama serve`)
+2. Start the server (`npm run server`)
+3. Open http://localhost:3000/api-docs in your browser
+4. Use the Swagger UI to test each endpoint
+5. Each endpoint accepts JSON payloads with the required parameters
 
 ## Error Handling
 
 The API includes comprehensive error handling:
-- Input validation
-- Model initialization errors
-- Processing errors
+- 400: Bad Request (missing or invalid parameters)
+- 500: Internal Server Error (model or processing errors)
 
-## Caching
+All error responses include a descriptive message in the response body.
 
-The service includes automatic caching for all endpoints to improve performance.
+## Troubleshooting
+
+1. If you get connection errors, ensure Ollama is running with:
+```bash
+ollama serve
+```
+
+2. If the model isn't responding, try restarting Ollama and the server
+
+3. Check the server logs for detailed error messages
 
 ## License
 
