@@ -1,12 +1,12 @@
+
 import { Router } from 'express';
-import { summarizeText, generateScript } from '../services/textService.js';
-import { cacheMiddleware } from '../middleware/cache.js';
+import { summarizeText, generateScript } from '../services/aiService.js';
 
 const textRouter = Router();
 
 /**
  * @swagger
- * /api/text/summarize:
+ * /api/text-summarization:
  *   post:
  *     summary: Summarize text using AI
  *     tags: [Text Services]
@@ -16,6 +16,8 @@ const textRouter = Router();
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - text
  *             properties:
  *               text:
  *                 type: string
@@ -23,22 +25,23 @@ const textRouter = Router();
  *       200:
  *         description: Text summarized successfully
  */
-textRouter.post('/summarize', cacheMiddleware, async (req, res) => {
+textRouter.post('/text-summarization', async (req, res) => {
   try {
     const { text } = req.body;
-    if (!text) return res.status(400).json({ error: 'Text is required' });
-    
+    if (!text) {
+      return res.status(400).json({ error: 'Text is required' });
+    }
     const summary = await summarizeText(text);
     res.json({ summary });
   } catch (error) {
-    console.error('Summarization error:', error);
-    res.status(500).json({ error: 'Summarization failed' });
+    console.error('Text summarization error:', error);
+    res.status(500).json({ error: 'Text summarization failed' });
   }
 });
 
 /**
  * @swagger
- * /api/text/generate-script:
+ * /api/script-generation:
  *   post:
  *     summary: Generate a script using AI
  *     tags: [Text Services]
@@ -48,6 +51,8 @@ textRouter.post('/summarize', cacheMiddleware, async (req, res) => {
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - prompt
  *             properties:
  *               prompt:
  *                 type: string
@@ -55,11 +60,12 @@ textRouter.post('/summarize', cacheMiddleware, async (req, res) => {
  *       200:
  *         description: Script generated successfully
  */
-textRouter.post('/generate-script', cacheMiddleware, async (req, res) => {
+textRouter.post('/script-generation', async (req, res) => {
   try {
     const { prompt } = req.body;
-    if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
-    
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
     const script = await generateScript(prompt);
     res.json({ script });
   } catch (error) {

@@ -1,34 +1,42 @@
+
 # AI API Service
 
-A powerful Express.js backend service for AI-powered features including text summarization, script generation, and media generation.
+A powerful Express.js backend service for AI-powered features using local Deepseek models.
 
 ## Prerequisites
 
 - Node.js (v18 or higher)
 - npm (v8 or higher)
+- Ollama (for running local AI models)
 
 ## Installation
 
-1. Clone the repository:
+1. Install Ollama from https://ollama.ai/
+
+2. Pull the Deepseek model:
+```bash
+ollama pull deepseek-coder:6.7b
+```
+
+3. Clone the repository:
 ```bash
 git clone <your-repo-url>
 cd ai-api-service
 ```
 
-2. Install dependencies:
+4. Install dependencies:
 ```bash
 npm install
 ```
 
-3. Create a `.env` file in the root directory:
-```
-PORT=3000
-NODE_ENV=development
-```
-
 ## Running the Application
 
-1. Start the development server:
+1. Start Ollama service (in a separate terminal):
+```bash
+ollama serve
+```
+
+2. Start the development server:
 ```bash
 npm run server
 ```
@@ -40,12 +48,8 @@ The application will be available at:
 ## Available Endpoints
 
 ### Text Services
-- POST `/api/text/summarize`: Summarize text using AI
-- POST `/api/text/generate-script`: Generate a script from a prompt
-
-### Media Services
-- POST `/api/media/text-to-speech`: Convert text to speech
-- POST `/api/media/text-to-image`: Generate images from text descriptions
+- POST `/api/text-summarization`: Summarize text using AI
+- POST `/api/script-generation`: Generate a script from a prompt
 
 ## Testing the APIs
 
