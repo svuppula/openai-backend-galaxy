@@ -131,7 +131,7 @@ const App = () => {
               onClick={handleGenerateImage}
               disabled={loading.image || !text}
             >
-              {loading.image ? 'Generating...' : 'Generate Images'}
+              {loading.image ? 'Generating...' : 'Generate Scenic Images'}
             </button>
           </div>
         </div>
@@ -152,7 +152,7 @@ const App = () => {
         </p>
         <div className="text-sm text-gray-600 space-y-2">
           <p>• POST /api/media/text-to-speech - Convert text to speech (MP3)</p>
-          <p>• POST /api/media/generate-image - Generate images from text</p>
+          <p>• POST /api/media/generate-image - Generate scenic images from text</p>
         </div>
       </div>
       
