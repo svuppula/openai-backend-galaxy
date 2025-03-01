@@ -26,16 +26,10 @@ export const mediaRouter = express.Router();
  *       200:
  *         description: Successfully converted text to speech
  *         content:
- *           application/json:
+ *           application/zip:
  *             schema:
- *               type: object
- *               properties:
- *                 audio:
- *                   type: string
- *                   description: Base64 encoded audio
- *                 format:
- *                   type: string
- *                   description: Audio format
+ *               type: string
+ *               format: binary
  *       400:
  *         description: Bad request, missing or invalid parameters
  *       500:
@@ -50,7 +44,13 @@ mediaRouter.post('/media/text-to-speech', async (req, res) => {
     }
     
     const result = await textToSpeech(text);
-    res.json(result);
+    
+    // Set headers for file download
+    res.setHeader('Content-Type', result.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    
+    // Send the file buffer
+    res.send(result.buffer);
   } catch (error) {
     console.error('Text-to-speech API error:', error.message);
     res.status(500).json({ error: error.message || 'Text-to-speech conversion failed' });
@@ -61,7 +61,7 @@ mediaRouter.post('/media/text-to-speech', async (req, res) => {
  * @swagger
  * /api/media/generate-image:
  *   post:
- *     summary: Generate an image from text
+ *     summary: Generate images from text
  *     tags: [Media Services]
  *     requestBody:
  *       required: true
@@ -77,18 +77,12 @@ mediaRouter.post('/media/text-to-speech', async (req, res) => {
  *                 description: Text prompt for image generation
  *     responses:
  *       200:
- *         description: Successfully generated image
+ *         description: Successfully generated images
  *         content:
- *           application/json:
+ *           application/zip:
  *             schema:
- *               type: object
- *               properties:
- *                 image:
- *                   type: string
- *                   description: Base64 encoded image
- *                 format:
- *                   type: string
- *                   description: Image format
+ *               type: string
+ *               format: binary
  *       400:
  *         description: Bad request, missing or invalid parameters
  *       500:
@@ -103,7 +97,13 @@ mediaRouter.post('/media/generate-image', async (req, res) => {
     }
     
     const result = await generateImage(prompt);
-    res.json(result);
+    
+    // Set headers for file download
+    res.setHeader('Content-Type', result.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    
+    // Send the file buffer
+    res.send(result.buffer);
   } catch (error) {
     console.error('Image generation API error:', error.message);
     res.status(500).json({ error: error.message || 'Image generation failed' });
