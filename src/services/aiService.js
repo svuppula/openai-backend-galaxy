@@ -1,21 +1,29 @@
 
 import { pipeline } from '@huggingface/transformers';
 
+// Model placeholders
 let summarizationModel;
 let generationModel;
 let initialized = false;
 
+/**
+ * Initialize AI models using Hugging Face transformers
+ */
 export const initializeModels = async () => {
   try {
     console.log('Initializing AI models...');
     
     // Initialize text processing models
-    summarizationModel = await pipeline('summarization', 'facebook/bart-large-cnn');
-    generationModel = await pipeline('text-generation', 'gpt2');
+    try {
+      summarizationModel = await pipeline('summarization', 'facebook/bart-large-cnn');
+      generationModel = await pipeline('text-generation', 'gpt2');
+      initialized = true;
+    } catch (error) {
+      console.warn('⚠️ Error initializing models:', error.message);
+      console.warn('Using fallback mode for AI features');
+    }
     
-    console.log('✅ AI models initialized successfully');
-    initialized = true;
-    return true;
+    return initialized;
   } catch (error) {
     console.warn('⚠️ Error initializing models:', error.message);
     console.warn('Using fallback mode for AI features');
@@ -23,6 +31,9 @@ export const initializeModels = async () => {
   }
 };
 
+/**
+ * Get fallback responses when models fail
+ */
 const getFallbackResponse = (type) => {
   const responses = {
     summary: "I've analyzed your text and created a concise summary that captures the main points while eliminating unnecessary details.",
@@ -31,6 +42,9 @@ const getFallbackResponse = (type) => {
   return responses[type];
 };
 
+/**
+ * Summarize text using AI
+ */
 export const summarizeText = async (text) => {
   try {
     if (!text) {
@@ -54,6 +68,9 @@ export const summarizeText = async (text) => {
   }
 };
 
+/**
+ * Generate a script using AI
+ */
 export const generateScript = async (prompt) => {
   try {
     if (!prompt) {

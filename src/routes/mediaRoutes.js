@@ -1,16 +1,15 @@
 
-import { Router } from 'express';
-import { textToSpeech, textToImage, textToVideo, textToAnimation } from '../services/mediaService.js';
-import { cacheMiddleware } from '../middleware/cache.js';
+import express from 'express';
+import { textToSpeech, generateImage, generateVideo, generateAnimation } from '../services/mediaService.js';
 
-const mediaRouter = Router();
+export const mediaRouter = express.Router();
 
 /**
  * @swagger
  * /api/media/text-to-speech:
  *   post:
  *     summary: Convert text to speech
- *     tags: [Media]
+ *     tags: [Media Services]
  *     requestBody:
  *       required: true
  *       content:
@@ -22,11 +21,10 @@ const mediaRouter = Router();
  *             properties:
  *               text:
  *                 type: string
- *                 description: The text to convert to speech
- *                 example: "Hello, how are you today?"
+ *                 description: Text to convert to speech
  *     responses:
  *       200:
- *         description: Audio generated successfully
+ *         description: Successfully converted text to speech
  *         content:
  *           application/json:
  *             schema:
@@ -34,33 +32,37 @@ const mediaRouter = Router();
  *               properties:
  *                 audio:
  *                   type: string
- *                   description: Base64 encoded audio data
+ *                   description: Base64 encoded audio
+ *                 format:
+ *                   type: string
+ *                   description: Audio format
  *       400:
- *         description: Missing or invalid text parameter
+ *         description: Bad request, missing or invalid parameters
  *       500:
- *         description: Text-to-speech conversion failed
+ *         description: Server error
  */
-mediaRouter.post('/media/text-to-speech', cacheMiddleware, async (req, res) => {
+mediaRouter.post('/media/text-to-speech', async (req, res) => {
   try {
     const { text } = req.body;
+    
     if (!text) {
       return res.status(400).json({ error: 'Text is required' });
     }
     
-    const audio = await textToSpeech(text);
-    res.json({ audio });
+    const result = await textToSpeech(text);
+    res.json(result);
   } catch (error) {
-    console.error('Text-to-speech error:', error);
-    res.status(500).json({ error: 'Text-to-speech conversion failed' });
+    console.error('Text-to-speech API error:', error.message);
+    res.status(500).json({ error: error.message || 'Text-to-speech conversion failed' });
   }
 });
 
 /**
  * @swagger
- * /api/media/text-to-image:
+ * /api/media/generate-image:
  *   post:
- *     summary: Generate image from text
- *     tags: [Media]
+ *     summary: Generate an image from text
+ *     tags: [Media Services]
  *     requestBody:
  *       required: true
  *       content:
@@ -72,11 +74,10 @@ mediaRouter.post('/media/text-to-speech', cacheMiddleware, async (req, res) => {
  *             properties:
  *               prompt:
  *                 type: string
- *                 description: The text prompt to generate an image from
- *                 example: "A beautiful sunset over mountains"
+ *                 description: Text prompt for image generation
  *     responses:
  *       200:
- *         description: Image generated successfully
+ *         description: Successfully generated image
  *         content:
  *           application/json:
  *             schema:
@@ -84,83 +85,37 @@ mediaRouter.post('/media/text-to-speech', cacheMiddleware, async (req, res) => {
  *               properties:
  *                 image:
  *                   type: string
- *                   description: Base64 encoded image data or URL
- *       400:
- *         description: Missing or invalid prompt parameter
- *       500:
- *         description: Image generation failed
- */
-mediaRouter.post('/media/text-to-image', cacheMiddleware, async (req, res) => {
-  try {
-    const { prompt } = req.body;
-    if (!prompt) {
-      return res.status(400).json({ error: 'Prompt is required' });
-    }
-    
-    const image = await textToImage(prompt);
-    res.json({ image });
-  } catch (error) {
-    console.error('Text-to-image error:', error);
-    res.status(500).json({ error: 'Image generation failed' });
-  }
-});
-
-/**
- * @swagger
- * /api/media/text-to-video:
- *   post:
- *     summary: Generate video from text
- *     tags: [Media]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - prompt
- *             properties:
- *               prompt:
- *                 type: string
- *                 description: The text prompt to generate a video from
- *                 example: "A car driving through a forest"
- *     responses:
- *       200:
- *         description: Video generated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 video:
+ *                   description: Base64 encoded image
+ *                 format:
  *                   type: string
- *                   description: URL or data for the generated video
+ *                   description: Image format
  *       400:
- *         description: Missing or invalid prompt parameter
+ *         description: Bad request, missing or invalid parameters
  *       500:
- *         description: Video generation failed
+ *         description: Server error
  */
-mediaRouter.post('/media/text-to-video', cacheMiddleware, async (req, res) => {
+mediaRouter.post('/media/generate-image', async (req, res) => {
   try {
     const { prompt } = req.body;
+    
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
     
-    const video = await textToVideo(prompt);
-    res.json({ video });
+    const result = await generateImage(prompt);
+    res.json(result);
   } catch (error) {
-    console.error('Text-to-video error:', error);
-    res.status(500).json({ error: 'Video generation failed' });
+    console.error('Image generation API error:', error.message);
+    res.status(500).json({ error: error.message || 'Image generation failed' });
   }
 });
 
 /**
  * @swagger
- * /api/media/text-to-animation:
+ * /api/media/generate-video:
  *   post:
- *     summary: Generate animation from text
- *     tags: [Media]
+ *     summary: Generate a video from text
+ *     tags: [Media Services]
  *     requestBody:
  *       required: true
  *       content:
@@ -172,37 +127,91 @@ mediaRouter.post('/media/text-to-video', cacheMiddleware, async (req, res) => {
  *             properties:
  *               prompt:
  *                 type: string
- *                 description: The text prompt to generate an animation from
- *                 example: "A bouncing ball that changes color"
+ *                 description: Text prompt for video generation
  *     responses:
  *       200:
- *         description: Animation generated successfully
+ *         description: Video generation request received
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 animation:
- *                   type: object
- *                   description: Animation data
+ *                 message:
+ *                   type: string
+ *                   description: Status message
+ *                 status:
+ *                   type: string
+ *                   description: Status code
  *       400:
- *         description: Missing or invalid prompt parameter
+ *         description: Bad request, missing or invalid parameters
  *       500:
- *         description: Animation generation failed
+ *         description: Server error
  */
-mediaRouter.post('/media/text-to-animation', cacheMiddleware, async (req, res) => {
+mediaRouter.post('/media/generate-video', async (req, res) => {
   try {
     const { prompt } = req.body;
+    
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
     
-    const animation = await textToAnimation(prompt);
-    res.json({ animation });
+    const result = await generateVideo(prompt);
+    res.json(result);
   } catch (error) {
-    console.error('Text-to-animation error:', error);
-    res.status(500).json({ error: 'Animation generation failed' });
+    console.error('Video generation API error:', error.message);
+    res.status(500).json({ error: error.message || 'Video generation failed' });
   }
 });
 
-export { mediaRouter };
+/**
+ * @swagger
+ * /api/media/generate-animation:
+ *   post:
+ *     summary: Generate an animation from text
+ *     tags: [Media Services]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - prompt
+ *             properties:
+ *               prompt:
+ *                 type: string
+ *                 description: Text prompt for animation generation
+ *     responses:
+ *       200:
+ *         description: Animation generation request received
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Status message
+ *                 status:
+ *                   type: string
+ *                   description: Status code
+ *       400:
+ *         description: Bad request, missing or invalid parameters
+ *       500:
+ *         description: Server error
+ */
+mediaRouter.post('/media/generate-animation', async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+    
+    const result = await generateAnimation(prompt);
+    res.json(result);
+  } catch (error) {
+    console.error('Animation generation API error:', error.message);
+    res.status(500).json({ error: error.message || 'Animation generation failed' });
+  }
+});

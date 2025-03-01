@@ -12,6 +12,8 @@
     "dev:all": "concurrently \"npm run dev\" \"npm run server\""
   },
   "dependencies": {
+    "@babel/plugin-transform-runtime": "^7.26.9",
+    "@babel/preset-env": "^7.26.9",
     "@hookform/resolvers": "^3.9.0",
     "@huggingface/transformers": "^3.3.3",
     "@radix-ui/react-accordion": "^1.2.0",
@@ -42,6 +44,7 @@
     "@radix-ui/react-toggle-group": "^1.1.0",
     "@radix-ui/react-tooltip": "^1.1.4",
     "@tanstack/react-query": "^5.56.2",
+    "babel-loader": "^10.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
@@ -77,6 +80,7 @@
     "swagger-ui-express": "^5.0.1",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
+    "terser-webpack-plugin": "^5.3.12",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "vaul": "^0.9.3",

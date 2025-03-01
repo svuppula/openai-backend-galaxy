@@ -4,6 +4,7 @@ import cors from 'cors';
 import morgan from 'morgan';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
+import serverless from 'serverless-http';
 import { textRouter } from './routes/textRoutes.js';
 import { aiRouter } from './routes/aiRoutes.js';
 import { mediaRouter } from './routes/mediaRoutes.js';
@@ -23,8 +24,8 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: `http://localhost:${PORT}`,
-        description: 'Development server',
+        url: process.env.BASE_URL || `http://localhost:${PORT}`,
+        description: 'API Server',
       },
     ],
   },
@@ -41,7 +42,7 @@ app.use(morgan('dev'));
 // Initialize AI models
 (async () => {
   try {
-    console.log('Starting standalone AI services...');
+    console.log('Starting AI services...');
     const initialized = await initializeModels();
     if (initialized) {
       console.log('✅ AI models initialized successfully');
@@ -57,14 +58,14 @@ app.use(morgan('dev'));
 // Routes
 app.use('/api', textRouter);
 app.use('/api', aiRouter);
-app.use('/api', mediaRouter); // Mount media routes
+app.use('/api', mediaRouter);
 
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'healthy', mode: 'standalone' });
+  res.json({ status: 'healthy', mode: 'serverless' });
 });
 
 // Error handling middleware
@@ -75,9 +76,13 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Swagger documentation available at http://localhost:${PORT}/api-docs`);
-});
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Swagger documentation available at http://localhost:${PORT}/api-docs`);
+  });
+}
 
-export default app;
+// Export the serverless handler for AWS Lambda
+export const handler = serverless(app);

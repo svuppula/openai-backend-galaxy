@@ -1,25 +1,74 @@
+
 service: ai-api-service
+
+frameworkVersion: '3'
 
 provider:
   name: aws
   runtime: nodejs18.x
-  stage: ${opt:stage, 'dev'}
+  stage: ${opt:stage, 'prod'}
   region: ${opt:region, 'us-east-1'}
   memorySize: 1024
   timeout: 29
-  logRetentionInDays: 7
+  logRetentionInDays: 30
+  versionFunctions: true
+  
+  # Configure API Gateway
+  apiGateway:
+    minimumCompressionSize: 1024
+    shouldStartNameWithService: true
+    binaryMediaTypes:
+      - 'image/*'
+      - 'audio/*'
+  
+  # Environment variables
+  environment:
+    NODE_ENV: production
+    STAGE: ${self:provider.stage}
+    
+  # Configure IAM role
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: arn:aws:logs:*:*:*
 
 functions:
   api:
-    handler: src/server.js
+    handler: src/server.handler
     events:
       - http:
           path: /{proxy+}
           method: any
           cors: true
     environment:
-      NODE_ENV: production
+      BASE_URL: !Join ['', ['https://', !Ref ApiGatewayRestApi, '.execute-api.', '${self:provider.region}', '.amazonaws.com/', '${self:provider.stage}']]
     reservedConcurrency: 100
+    provisionedConcurrency: 5
+    # Configure auto-scaling for higher loads
+    # Uncomment below to enable auto-scaling
+    # events:
+    #   - schedule:
+    #       rate: rate(5 minutes)
+    #       enabled: true
+    #     concurrencyAutoscaling: true
+    #     concurrencyTargetValue: 0.7
+    #     concurrencyMinCapacity: 5
+    #     concurrencyMaxCapacity: 100
+
+package:
+  individually: true
+  exclude:
+    - .git/**
+    - test/**
+    - coverage/**
+    - node_modules/aws-sdk/**
+    - '**/*.test.js'
+    - README.md
 
 plugins:
   - serverless-offline
@@ -31,7 +80,42 @@ custom:
     packager: 'npm'
     includeModules: true
     excludeFiles: '**/*.test.js'
+    concurrency: 5
 
   serverless-offline:
     httpPort: 3000
     noPrependStageInUrl: true
+
+resources:
+  Resources:
+    # CloudFront distribution for global content delivery
+    CloudFrontDistribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Enabled: true
+          DefaultCacheBehavior:
+            AllowedMethods:
+              - DELETE
+              - GET
+              - HEAD
+              - OPTIONS
+              - PATCH
+              - POST
+              - PUT
+            TargetOriginId: ApiGateway
+            ForwardedValues:
+              QueryString: true
+              Headers:
+                - Accept
+                - Authorization
+                - Content-Type
+            ViewerProtocolPolicy: redirect-to-https
+          Origins:
+            - DomainName: !Join ['', [!Ref ApiGatewayRestApi, '.execute-api.', '${self:provider.region}', '.amazonaws.com']]
+              Id: ApiGateway
+              CustomOriginConfig:
+                HTTPPort: 80
+                HTTPSPort: 443
+                OriginProtocolPolicy: https-only
+          PriceClass: PriceClass_100

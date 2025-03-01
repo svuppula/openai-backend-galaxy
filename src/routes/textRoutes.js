@@ -1,8 +1,8 @@
 
-import { Router } from 'express';
+import express from 'express';
 import { summarizeText, generateScript } from '../services/aiService.js';
 
-const textRouter = Router();
+export const textRouter = express.Router();
 
 /**
  * @swagger
@@ -21,10 +21,10 @@ const textRouter = Router();
  *             properties:
  *               text:
  *                 type: string
- *                 description: The text to be summarized
+ *                 description: Text to summarize
  *     responses:
  *       200:
- *         description: Text summarized successfully
+ *         description: Successfully summarized text
  *         content:
  *           application/json:
  *             schema:
@@ -32,28 +32,25 @@ const textRouter = Router();
  *               properties:
  *                 summary:
  *                   type: string
+ *                   description: Summarized text
  *       400:
- *         description: Bad request - text is missing
+ *         description: Bad request, missing or invalid parameters
  *       500:
- *         description: Internal server error
+ *         description: Server error
  */
 textRouter.post('/text/summarize', async (req, res) => {
   try {
     const { text } = req.body;
     
-    if (!text || typeof text !== 'string') {
-      return res.status(400).json({ 
-        error: 'Text is required and must be a string' 
-      });
+    if (!text) {
+      return res.status(400).json({ error: 'Text is required' });
     }
-
+    
     const summary = await summarizeText(text);
     res.json({ summary });
   } catch (error) {
-    console.error('Text summarization error:', error);
-    res.status(500).json({ 
-      error: error.message || 'Text summarization failed' 
-    });
+    console.error('Text summarization API error:', error.message);
+    res.status(500).json({ error: error.message || 'Text summarization failed' });
   }
 });
 
@@ -61,7 +58,7 @@ textRouter.post('/text/summarize', async (req, res) => {
  * @swagger
  * /api/text/generate:
  *   post:
- *     summary: Generate a script or story using AI
+ *     summary: Generate creative text from a prompt
  *     tags: [Text Services]
  *     requestBody:
  *       required: true
@@ -74,10 +71,10 @@ textRouter.post('/text/summarize', async (req, res) => {
  *             properties:
  *               prompt:
  *                 type: string
- *                 description: The prompt for generating the script/story
+ *                 description: Creative prompt for text generation
  *     responses:
  *       200:
- *         description: Script generated successfully
+ *         description: Successfully generated text
  *         content:
  *           application/json:
  *             schema:
@@ -85,29 +82,74 @@ textRouter.post('/text/summarize', async (req, res) => {
  *               properties:
  *                 script:
  *                   type: string
+ *                   description: Generated text
  *       400:
- *         description: Bad request - prompt is missing
+ *         description: Bad request, missing or invalid parameters
  *       500:
- *         description: Internal server error
+ *         description: Server error
  */
 textRouter.post('/text/generate', async (req, res) => {
   try {
     const { prompt } = req.body;
     
-    if (!prompt || typeof prompt !== 'string') {
-      return res.status(400).json({ 
-        error: 'Prompt is required and must be a string' 
-      });
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
     }
-
+    
     const script = await generateScript(prompt);
     res.json({ script });
   } catch (error) {
-    console.error('Script generation error:', error);
-    res.status(500).json({ 
-      error: error.message || 'Script generation failed' 
-    });
+    console.error('Text generation API error:', error.message);
+    res.status(500).json({ error: error.message || 'Text generation failed' });
   }
 });
 
-export { textRouter };
+/**
+ * @swagger
+ * /api/text/script-generation:
+ *   post:
+ *     summary: Generate a script from a prompt
+ *     tags: [Text Services]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - prompt
+ *             properties:
+ *               prompt:
+ *                 type: string
+ *                 description: Creative prompt for script generation
+ *     responses:
+ *       200:
+ *         description: Successfully generated script
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 script:
+ *                   type: string
+ *                   description: Generated script
+ *       400:
+ *         description: Bad request, missing or invalid parameters
+ *       500:
+ *         description: Server error
+ */
+textRouter.post('/text/script-generation', async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+    
+    const script = await generateScript(prompt);
+    res.json({ script });
+  } catch (error) {
+    console.error('Script generation API error:', error.message);
+    res.status(500).json({ error: error.message || 'Script generation failed' });
+  }
+});
