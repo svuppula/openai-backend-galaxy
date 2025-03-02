@@ -1,6 +1,7 @@
+
 {
-  "short_name": "AI API Service",
-  "name": "AI API Service - Backend Galaxy",
+  "short_name": "Collaborators World API",
+  "name": "Collaborators World API - Backend Galaxy",
   "icons": [
     {
       "src": "favicon.ico",
