@@ -1,3 +1,4 @@
+
 import fs from 'fs-extra';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
@@ -385,41 +386,57 @@ export const generateVideo = async (prompt) => {
   try {
     // Create a unique temporary directory
     const tempDir = await createTempDirectory();
-    const videoFile = path.join(tempDir, 'video.mp4');
     
     // Extract keywords from the prompt
     const keywords = extractKeywords(prompt);
     
-    // Generate a simple video file (mock implementation)
-    // In a real implementation, you would use a video generation library
+    // Generate multiple frames for a video
+    const numFrames = 10;
+    const framePromises = [];
     
-    // Create a placeholder video file with metadata about the request
-    const metadata = {
-      prompt,
-      keywords,
-      timestamp: new Date().toISOString(),
-      type: 'video',
-      format: 'mp4'
-    };
+    for (let i = 0; i < numFrames; i++) {
+      const seed = Math.floor(Math.random() * 1000000) + i * 1000; // Different seed for each frame
+      const framePath = path.join(tempDir, `frame_${i.toString().padStart(3, '0')}.jpg`);
+      framePromises.push(generateProceduralImage(keywords, 640, 480, framePath, seed));
+    }
     
-    await fs.writeFile(videoFile, JSON.stringify(metadata, null, 2));
+    // Wait for all frames to be generated
+    await Promise.all(framePromises);
     
-    // Create a zip file containing the video
+    // Create a simple metadata.txt file explaining what would be in the video
+    const metadataPath = path.join(tempDir, 'metadata.txt');
+    const metadataContent = `
+Video generated from prompt: "${prompt}"
+Keywords: ${keywords.join(', ')}
+Number of frames: ${numFrames}
+Resolution: 640x480
+Generated at: ${new Date().toISOString()}
+
+Note: In a production environment, these frames would be combined into a video file.
+This is a demonstration of the procedural video generation capabilities.
+`;
+    await fs.writeFile(metadataPath, metadataContent);
+    
+    // Create a zip file with all frames and metadata
     const zip = new AdmZip();
-    zip.addLocalFile(videoFile);
+    const files = await fs.readdir(tempDir);
+    files.forEach(file => {
+      zip.addLocalFile(path.join(tempDir, file));
+    });
+    
     const zipBuffer = zip.toBuffer();
     
-    // Clean up the temporary directory
+    // Clean up temporary directory
     await cleanupTempDirectory(tempDir);
     
     return zipBuffer;
   } catch (error) {
-    console.error('Error generating video:', error);
-    throw new Error(`Failed to generate video: ${error.message}`);
+    console.error('Video generation error:', error);
+    throw new Error(`Video generation failed: ${error.message}`);
   }
 };
 
-// Function to create animation content
+// Function to generate animation content
 export const generateAnimation = async (prompt) => {
   if (!prompt) {
     throw new Error('Prompt is required for animation generation');
@@ -428,36 +445,104 @@ export const generateAnimation = async (prompt) => {
   try {
     // Create a unique temporary directory
     const tempDir = await createTempDirectory();
-    const animationFile = path.join(tempDir, 'animation.gif');
     
     // Extract keywords from the prompt
     const keywords = extractKeywords(prompt);
     
-    // Generate a simple animation file (mock implementation)
-    // In a real implementation, you would use an animation generation library
+    // Generate multiple frames for animation with smoother transitions
+    const numFrames = 12; // 12 frames for a simple animation loop
+    const framePromises = [];
+    const baseSpeed = Math.random() * 0.02 + 0.01; // Random base speed for elements
     
-    // Create a placeholder animation file with metadata about the request
-    const metadata = {
-      prompt,
-      keywords,
-      timestamp: new Date().toISOString(),
-      type: 'animation',
-      format: 'gif'
-    };
+    for (let i = 0; i < numFrames; i++) {
+      // We'll use a consistent base seed but modify it slightly for each frame
+      // to create smooth transitions between frames
+      const baseSeed = Math.floor(Math.random() * 1000000);
+      const frameSeed = baseSeed + i * 10; // Smaller increment for smoother transition
+      const framePath = path.join(tempDir, `frame_${i.toString().padStart(3, '0')}.jpg`);
+      
+      // Generate procedural image for this animation frame
+      const canvas = createCanvas(640, 480);
+      const ctx = canvas.getContext('2d');
+      
+      // Custom random function with seed
+      const random = (min, max) => {
+        let seed = frameSeed;
+        for (let j = 0; j < i; j++) {
+          seed = (seed * 9301 + 49297) % 233280;
+        }
+        const rnd = seed / 233280;
+        return min + rnd * (max - min);
+      };
+      
+      // Common background for all frames
+      const skyGradient = ctx.createLinearGradient(0, 0, 0, 480);
+      skyGradient.addColorStop(0, '#87CEEB');
+      skyGradient.addColorStop(1, '#E0F7FF');
+      ctx.fillStyle = skyGradient;
+      ctx.fillRect(0, 0, 640, 480);
+      
+      // Animation-specific elements - clouds that move across frames
+      const numClouds = 5;
+      for (let c = 0; c < numClouds; c++) {
+        const cloudX = (random(0, 640) + i * baseSpeed * 640) % 640;
+        const cloudY = random(50, 150);
+        const cloudRadius = random(30, 60);
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        
+        // Draw cloud (multiple overlapping circles)
+        for (let j = 0; j < 5; j++) {
+          const offsetX = random(-cloudRadius/2, cloudRadius/2);
+          const offsetY = random(-cloudRadius/4, cloudRadius/4);
+          const circleRadius = random(cloudRadius/2, cloudRadius);
+          
+          ctx.beginPath();
+          ctx.arc(cloudX + offsetX, cloudY + offsetY, circleRadius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      
+      // Save frame
+      const buffer = canvas.toBuffer('image/jpeg');
+      await fs.writeFile(framePath, buffer);
+      
+      framePromises.push(framePath);
+    }
     
-    await fs.writeFile(animationFile, JSON.stringify(metadata, null, 2));
+    // Wait for all frames to be written
+    await Promise.all(framePromises);
     
-    // Create a zip file containing the animation
+    // Create a simple metadata.txt file
+    const metadataPath = path.join(tempDir, 'metadata.txt');
+    const metadataContent = `
+Animation generated from prompt: "${prompt}"
+Keywords: ${keywords.join(', ')}
+Number of frames: ${numFrames}
+Frame rate: 12 fps
+Resolution: 640x480
+Generated at: ${new Date().toISOString()}
+
+Note: In a production environment, these frames would be combined into a GIF or video animation.
+This is a demonstration of the procedural animation generation capabilities.
+`;
+    await fs.writeFile(metadataPath, metadataContent);
+    
+    // Create a zip file with all frames and metadata
     const zip = new AdmZip();
-    zip.addLocalFile(animationFile);
+    const files = await fs.readdir(tempDir);
+    files.forEach(file => {
+      zip.addLocalFile(path.join(tempDir, file));
+    });
+    
     const zipBuffer = zip.toBuffer();
     
-    // Clean up the temporary directory
+    // Clean up temporary directory
     await cleanupTempDirectory(tempDir);
     
     return zipBuffer;
   } catch (error) {
-    console.error('Error generating animation:', error);
-    throw new Error(`Failed to generate animation: ${error.message}`);
+    console.error('Animation generation error:', error);
+    throw new Error(`Animation generation failed: ${error.message}`);
   }
 };
