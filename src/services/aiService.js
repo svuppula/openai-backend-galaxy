@@ -131,176 +131,277 @@ function createStructuredScript(prompt, options = {}) {
   
   // Generate character names based on language
   const maleNames = {
-    'Telugu': ['Ravi', 'Krishna', 'Venu', 'Surya', 'Karthik'],
-    'Hindi': ['Rahul', 'Vikram', 'Aditya', 'Raj', 'Arjun'],
-    'Tamil': ['Karthik', 'Surya', 'Vijay', 'Arjun', 'Raj'],
-    'English': ['Michael', 'David', 'Robert', 'John', 'William']
+    'Telugu': ['Ravi', 'Krishna', 'Venu', 'Surya', 'Karthik', 'Vijay', 'Ajay', 'Sai', 'Prasad', 'Naresh', 'Mahesh', 'Ram', 'Charan', 'Arun', 'Prabhas'],
+    'Hindi': ['Rahul', 'Vikram', 'Aditya', 'Raj', 'Arjun', 'Akshay', 'Rohit', 'Amit', 'Rishi', 'Vikas', 'Sanjay', 'Nikhil', 'Varun', 'Rajesh', 'Karan'],
+    'Tamil': ['Karthik', 'Surya', 'Vijay', 'Arjun', 'Raj', 'Ajith', 'Sakthi', 'Praveen', 'Manoj', 'Dinesh', 'Kumar', 'Suresh', 'Ganesh', 'Bala', 'Mani'],
+    'English': ['Michael', 'David', 'Robert', 'John', 'William', 'James', 'Thomas', 'Joseph', 'Christopher', 'Daniel', 'Matthew', 'Anthony', 'Mark', 'Paul', 'Steven']
   };
   
   const femaleNames = {
-    'Telugu': ['Ananya', 'Divya', 'Sravani', 'Priya', 'Lakshmi'],
-    'Hindi': ['Meera', 'Priya', 'Neha', 'Anjali', 'Pooja'],
-    'Tamil': ['Priya', 'Divya', 'Lakshmi', 'Kavya', 'Meena'],
-    'English': ['Emily', 'Sarah', 'Jessica', 'Amanda', 'Elizabeth']
+    'Telugu': ['Ananya', 'Divya', 'Sravani', 'Priya', 'Lakshmi', 'Madhavi', 'Sunitha', 'Kavitha', 'Deepika', 'Swathi', 'Sujatha', 'Meenakshi', 'Jyothi', 'Nandini', 'Padma'],
+    'Hindi': ['Meera', 'Priya', 'Neha', 'Anjali', 'Pooja', 'Aarti', 'Kavita', 'Nisha', 'Shikha', 'Deepika', 'Anu', 'Jyoti', 'Suman', 'Preeti', 'Ritu'],
+    'Tamil': ['Priya', 'Divya', 'Lakshmi', 'Kavya', 'Meena', 'Sangeetha', 'Lalitha', 'Kalpana', 'Devi', 'Anitha', 'Vijaya', 'Radha', 'Saranya', 'Seetha', 'Vimala'],
+    'English': ['Emily', 'Sarah', 'Jessica', 'Amanda', 'Elizabeth', 'Jennifer', 'Mary', 'Patricia', 'Linda', 'Barbara', 'Susan', 'Margaret', 'Lisa', 'Nancy', 'Karen']
+  };
+  
+  // Generate random titles based on themes
+  const titles = {
+    'Love and Relationships': [
+      'HEARTS IN HARMONY', 'SILENT VOWS', 'WHISPERS OF LOVE', 
+      'THE COLOR OF PASSION', 'BETWEEN TWO HEARTS', 'LOVE IN THE RAIN',
+      'FORGOTTEN PROMISES', 'DESTINY\'S EMBRACE', 'CROSSING PATHS',
+      'LOVE BEYOND BORDERS', 'THE WAITING HEART', 'UNSPOKEN WORDS'
+    ],
+    'Friendship and Loyalty': [
+      'BONDS UNBROKEN', 'THE PACT', 'CHILDHOOD MEMORIES', 
+      'HANDS THAT HOLD', 'BEYOND BLOOD', 'TRUE COMPANIONS',
+      'SHOULDER TO SHOULDER', 'THE PROMISE KEEPERS', 'FRIENDS FOREVER',
+      'LOYALTY TESTED', 'THE STRENGTH OF MANY', 'BROTHERS IN SPIRIT'
+    ],
+    'Family Values': [
+      'BLOOD TIES', 'THE FAMILY TREE', 'GENERATIONS', 
+      'HOME IS WHERE', 'ROOTS AND WINGS', 'ANCESTRAL BONDS',
+      'THE INHERITANCE', 'FAMILY SECRETS', 'FATHER\'S LEGACY',
+      'MOTHER\'S WISDOM', 'REUNITING HEARTS', 'THE RETURN HOME'
+    ],
+    'Social Issues': [
+      'VOICES UNHEARD', 'THE CHANGE MAKERS', 'BREAKING CHAINS', 
+      'SILENT REVOLUTION', 'BEYOND THE WALLS', 'NEW HORIZONS',
+      'THE AWAKENING', 'STANDING TALL', 'AGAINST THE CURRENT',
+      'TRUTH UNVEILED', 'FIGHTING DARKNESS', 'HOPE IN SHADOWS'
+    ]
   };
   
   // Select random names
   const maleNameList = maleNames[language] || maleNames['English'];
   const femaleNameList = femaleNames[language] || femaleNames['English'];
   
-  const hero = maleNameList[Math.floor(Math.random() * maleNameList.length)];
-  const heroine = femaleNameList[Math.floor(Math.random() * femaleNameList.length)];
-  const friend = maleNameList[Math.floor(Math.random() * maleNameList.length)];
+  // Shuffle the arrays to create randomness
+  const shuffledMaleNames = [...maleNameList].sort(() => Math.random() - 0.5);
+  const shuffledFemaleNames = [...femaleNameList].sort(() => Math.random() - 0.5);
   
-  // Create script structure
+  const hero = shuffledMaleNames[0];
+  const heroine = shuffledFemaleNames[0];
+  const friend = shuffledMaleNames[1];
+  const rival = shuffledMaleNames[2];
+  const parentName = Math.random() > 0.5 ? shuffledMaleNames[3] : shuffledFemaleNames[1];
+  
+  // Select random title
+  const themeKey = isLove ? 'Love and Relationships' : 
+                  isFriendship ? 'Friendship and Loyalty' : 
+                  isFamily ? 'Family Values' : 
+                  isSocial ? 'Social Issues' : 'Family Values';
+  
+  const themeTitles = titles[themeKey] || titles['Family Values'];
+  const title = themeTitles[Math.floor(Math.random() * themeTitles.length)];
+  
+  // Generate random locations
+  const locations = {
+    'Telugu': ['Hyderabad', 'Visakhapatnam', 'Vijayawada', 'Warangal', 'Tirupati', 'Coastal village', 'Godavari riverbank', 'Krishna district', 'Araku Valley', 'Rayalaseema region'],
+    'Hindi': ['Mumbai', 'Delhi', 'Agra', 'Jaipur', 'Varanasi', 'Himalayan village', 'Ganga riverbank', 'Rajasthan desert', 'Kerala backwaters', 'Punjab fields'],
+    'Tamil': ['Chennai', 'Madurai', 'Coimbatore', 'Pondicherry', 'Ooty', 'Coastal fishing village', 'Kaveri riverbank', 'Tea plantation', 'Temple town', 'Hill station'],
+    'English': ['New York', 'London', 'Los Angeles', 'Sydney', 'Toronto', 'Coastal town', 'Mountain retreat', 'University campus', 'Small town America', 'European village']
+  };
+  
+  // Get random locations
+  const locationList = locations[language] || locations['English'];
+  const shuffledLocations = [...locationList].sort(() => Math.random() - 0.5);
+  const mainLocation = shuffledLocations[0];
+  const secondLocation = shuffledLocations[1];
+  
+  // Generate random plot twists
+  const plotTwists = [
+    `${hero} discovers a hidden truth about his past that changes everything.`,
+    `${heroine} has been keeping a secret that threatens their relationship.`,
+    `An unexpected visitor from ${hero}'s past arrives, bringing chaos.`,
+    `${friend} betrays ${hero} in an unexpected way, testing their friendship.`,
+    `A natural disaster forces everyone to reconsider their priorities.`,
+    `${rival} and ${hero} discover they're related by blood.`,
+    `${heroine}'s family reveals a long-kept secret about their ancestry.`,
+    `An old letter reveals the truth about a misunderstanding from years ago.`,
+    `${hero} faces a moral dilemma that challenges his core beliefs.`,
+    `A childhood promise comes back to haunt ${heroine} at the worst possible time.`
+  ];
+  
+  // Choose a random plot twist
+  const plotTwist = plotTwists[Math.floor(Math.random() * plotTwists.length)];
+  
+  // Create script structure with randomized elements
   let script = '';
   
   // Title and metadata
-  if (isLove) {
-    script += `TITLE: "THE JOURNEY OF LOVE"\n\n`;
-  } else if (isFriendship) {
-    script += `TITLE: "BONDS OF FRIENDSHIP"\n\n`;
-  } else if (isFamily) {
-    script += `TITLE: "FAMILY TIES"\n\n`;
-  } else if (isSocial) {
-    script += `TITLE: "CHANGE MAKERS"\n\n`;
-  } else {
-    script += `TITLE: "THE TURNING POINT"\n\n`;
-  }
-  
+  script += `TITLE: "${title}"\n\n`;
   script += `GENRE: ${genre}\n`;
-  script += `THEME: ${theme}\n`;
+  script += `THEME: ${themeKey}\n`;
   script += `DURATION: 30 minutes\n`;
   script += `LANGUAGE: ${language}\n\n`;
   
-  // Characters
+  // Characters with randomized descriptions
   script += `CHARACTERS:\n`;
-  script += `- ${hero}: Main protagonist, ${isLove ? 'in love with ' + heroine : 'ambitious and determined'}\n`;
-  script += `- ${heroine}: ${isLove ? 'Love interest, beautiful and intelligent' : 'Supporting character, friend of ' + hero}\n`;
-  script += `- ${friend}: Best friend of ${hero}, provides comic relief and support\n`;
+  
+  const heroTraits = ['ambitious', 'compassionate', 'stubborn', 'loyal', 'quick-tempered', 'creative', 'analytical', 'charismatic'];
+  const heroineTraits = ['intelligent', 'resilient', 'soft-spoken', 'determined', 'empathetic', 'practical', 'adventurous', 'reserved'];
+  const friendTraits = ['humorous', 'supportive', 'cautious', 'impulsive', 'wise', 'skeptical', 'optimistic', 'protective'];
+  
+  const randomHeroTrait = heroTraits[Math.floor(Math.random() * heroTraits.length)];
+  const randomHeroTrait2 = heroTraits[Math.floor(Math.random() * heroTraits.length)];
+  const randomHeroineTrait = heroineTraits[Math.floor(Math.random() * heroineTraits.length)];
+  const randomHeroineTrait2 = heroineTraits[Math.floor(Math.random() * heroineTraits.length)];
+  const randomFriendTrait = friendTraits[Math.floor(Math.random() * friendTraits.length)];
+  
+  script += `- ${hero}: Main protagonist, ${randomHeroTrait} and ${randomHeroTrait2}\n`;
+  script += `- ${heroine}: ${isLove ? 'Love interest' : 'Supporting character'}, ${randomHeroineTrait} and ${randomHeroineTrait2}\n`;
+  script += `- ${friend}: Best friend of ${hero}, ${randomFriendTrait} and provides support\n`;
   
   if (isFamily) {
-    script += `- Father: Traditional and strict\n`;
-    script += `- Mother: Loving and understanding\n`;
+    script += `- ${parentName}: ${Math.random() > 0.5 ? 'Father' : 'Mother'} of ${hero}, ${Math.random() > 0.5 ? 'traditional and strict' : 'loving and understanding'}\n`;
   }
   
-  if (isSocial) {
-    script += `- Village Head: Antagonist, opposes change\n`;
-    script += `- Elder: Wise mentor figure\n`;
+  if (Math.random() > 0.6) {
+    script += `- ${rival}: ${isLove ? `Competes with ${hero} for ${heroine}'s affection` : `${hero}'s rival in ${Math.random() > 0.5 ? 'business' : 'personal life'}`}\n`;
   }
   
+  // Generate random synopsis
   script += `\nSYNOPSIS:\n`;
   
-  // Generate synopsis based on theme
   if (isLove) {
-    script += `${hero} and ${heroine} belong to different backgrounds but fall in love. They face opposition from their families and society. Through their journey, they overcome obstacles and prove that love transcends all boundaries.\n\n`;
+    script += `In the ${mainLocation === 'Hyderabad' || mainLocation === 'Mumbai' ? 'bustling city' : 'picturesque setting'} of ${mainLocation}, ${hero}, a ${randomHeroTrait} young man from a ${Math.random() > 0.5 ? 'middle-class' : 'traditional'} family, crosses paths with ${heroine}, a ${randomHeroineTrait} woman who ${Math.random() > 0.5 ? 'recently moved from ' + secondLocation : 'works as a ' + (Math.random() > 0.5 ? 'teacher' : 'doctor')}. Despite their ${Math.random() > 0.5 ? 'different backgrounds' : 'initial misunderstandings'}, they find themselves drawn to each other. ${plotTwist} With the support of ${friend}, ${hero} must navigate the complexities of love and relationships while staying true to his values.\n\n`;
   } else if (isFriendship) {
-    script += `${hero} and ${friend} have been friends since childhood. When ${hero} faces a major crisis, ${friend} stands by him, sacrificing his own dreams. Their friendship is tested through various challenges, but ultimately proves stronger than any obstacle.\n\n`;
+    script += `${hero} and ${friend} have been inseparable since childhood in ${mainLocation}. When ${hero} faces ${Math.random() > 0.5 ? 'a major personal crisis' : 'an opportunity to move to ' + secondLocation}, their friendship is put to the ultimate test. ${plotTwist} The story explores the depths of true friendship and the sacrifices we make for those we care about. ${heroine} enters their lives at a crucial moment, bringing a new perspective that changes everything.\n\n`;
   } else if (isFamily) {
-    script += `${hero}'s traditional family faces a major crisis when he decides to pursue an unconventional career. The family dynamics change, leading to conflicts and misunderstandings. Eventually, they learn to support each other and understand the importance of family bonds.\n\n`;
+    script += `The ${hero}'s family in ${mainLocation} faces a turning point when ${Math.random() > 0.5 ? hero + ' decides to pursue an unconventional career against ' + parentName + '\'s wishes' : 'an unexpected family secret comes to light'}. ${plotTwist} Family bonds are tested as they navigate through misunderstandings, generational gaps, and the rediscovery of what truly matters. ${friend} stands by ${hero}'s side while ${heroine} provides a fresh perspective that helps bridge the divides.\n\n`;
   } else if (isSocial) {
-    script += `${hero}, a young graduate returns to his village and witnesses various social issues. With the help of ${heroine} and ${friend}, he starts initiatives to bring change. They face opposition from the village head but eventually succeed in transforming the community.\n\n`;
+    script += `When ${hero} returns to his home in ${mainLocation} after ${Math.random() > 0.5 ? 'completing his education in ' + secondLocation : 'years of working in ' + secondLocation}, he witnesses the social issues plaguing his community. With determination and the help of ${heroine} and ${friend}, he initiates change that faces strong opposition from influential figures. ${plotTwist} The story highlights the courage needed to challenge established norms and the power of community action.\n\n`;
   } else {
-    script += `${hero} leads an ordinary life until a sudden incident changes everything. With support from ${heroine} and ${friend}, he embarks on a journey of self-discovery and transformation. Through various challenges, he finds his true purpose and emerges stronger.\n\n`;
+    script += `In ${mainLocation}, ${hero}'s ordinary life takes an extraordinary turn when ${Math.random() > 0.5 ? 'a chance encounter with ' + heroine + ' reveals an unexpected connection' : 'he discovers a hidden talent that changes his perspective'}. ${plotTwist} With ${friend}'s unwavering support and ${heroine}'s unique insights, ${hero} embarks on a journey of self-discovery that will test his resilience and transform his understanding of life's purpose.\n\n`;
   }
   
-  // Scenes
+  // Scene structure with randomized elements
   script += `SCENE BREAKDOWN:\n\n`;
   
-  // Scene 1
-  script += `SCENE 1 - INTRODUCTION\n`;
-  script += `LOCATION: Village/Town setting - Morning\n\n`;
-  script += `[${hero} is introduced in his daily routine. We see his character traits and lifestyle.]\n\n`;
-  script += `${hero}: (to himself) Another day, another challenge. But today feels different somehow.\n\n`;
+  // Add varied scenes with randomized elements
+  const timeOfDay = ['Morning', 'Afternoon', 'Evening', 'Night', 'Dawn', 'Dusk', 'Sunset'];
+  const emotions = ['joy', 'sorrow', 'anger', 'confusion', 'hope', 'despair', 'determination', 'regret'];
+  const weatherConditions = ['sunny', 'rainy', 'cloudy', 'stormy', 'foggy', 'clear', 'windy'];
   
-  // Scene 2
-  script += `SCENE 2 - INCITING INCIDENT\n`;
-  script += `LOCATION: Public place - Afternoon\n\n`;
+  // Get random elements
+  const randomTime1 = timeOfDay[Math.floor(Math.random() * timeOfDay.length)];
+  const randomTime2 = timeOfDay[Math.floor(Math.random() * timeOfDay.length)];
+  const randomTime3 = timeOfDay[Math.floor(Math.random() * timeOfDay.length)];
+  const randomEmotion1 = emotions[Math.floor(Math.random() * emotions.length)];
+  const randomEmotion2 = emotions[Math.floor(Math.random() * emotions.length)];
+  const randomWeather = weatherConditions[Math.floor(Math.random() * weatherConditions.length)];
+  
+  // Scene 1 - Introduction
+  script += `SCENE 1 - INTRODUCTION\n`;
+  script += `LOCATION: ${mainLocation} - ${randomTime1}\n\n`;
+  script += `[The ${randomWeather} day sets the tone as ${hero} is introduced in his daily life. We see his ${randomHeroTrait} nature and his relationship with ${friend}.]\n\n`;
+  script += `${hero}: (looking ${Math.random() > 0.5 ? 'thoughtful' : 'determined'}) ${Math.random() > 0.5 ? 'Every day feels the same, but something tells me today will be different.' : 'I can\'t shake this feeling that something\'s about to change.'}\n\n`;
+  
+  // Scene 2 - Meeting or Inciting Incident
+  script += `SCENE 2 - ${isLove ? 'FIRST MEETING' : 'INCITING INCIDENT'}\n`;
+  script += `LOCATION: ${Math.random() > 0.5 ? 'Busy marketplace in ' + mainLocation : 'Local ' + (Math.random() > 0.5 ? 'café' : 'park') + ' in ' + mainLocation} - ${randomTime2}\n\n`;
   
   if (isLove) {
-    script += `[${hero} meets ${heroine} for the first time under unexpected circumstances.]\n\n`;
-    script += `${hero}: I'm sorry, I didn't see you there.\n`;
-    script += `${heroine}: It's alright. (Their eyes meet, suggesting an instant connection)\n\n`;
+    script += `[${hero} and ${heroine} meet under ${Math.random() > 0.5 ? 'unexpected circumstances' : 'a humorous misunderstanding'}.]\n\n`;
+    script += `${hero}: (${Math.random() > 0.5 ? 'accidentally bumping into ' + heroine : 'helping ' + heroine + ' with her dropped belongings'}) I'm sorry, I didn't ${Math.random() > 0.5 ? 'see you there' : 'mean to cause trouble'}.\n`;
+    script += `${heroine}: (${Math.random() > 0.5 ? 'slightly annoyed' : 'smiling'}) It's alright. (Their eyes meet, ${Math.random() > 0.5 ? 'suggesting an instant connection' : 'creating an awkward but memorable moment'})\n\n`;
   } else if (isFriendship) {
     script += `[${hero} learns about a problem that will test his friendship with ${friend}.]\n\n`;
-    script += `${friend}: I've always been there for you, and now I need your help more than ever.\n`;
-    script += `${hero}: What happened? Tell me everything.\n\n`;
+    script += `${friend}: (looking troubled) I've always been there for you, and now I need your help more than ever.\n`;
+    script += `${hero}: (concerned) What happened? Tell me everything.\n`;
+    script += `${friend}: (hesitant) It's about ${Math.random() > 0.5 ? 'the job offer in ' + secondLocation : 'what happened with ' + (Math.random() > 0.5 ? 'my family' : 'my future')}...\n\n`;
   } else if (isFamily) {
-    script += `[Family argument about ${hero}'s decisions.]\n\n`;
-    script += `Father: This is not what we planned for you!\n`;
-    script += `${hero}: But this is what I want to do with my life!\n`;
-    script += `Mother: (trying to mediate) Let's all calm down and discuss this properly.\n\n`;
+    script += `[A tense family discussion reveals deeper issues.]\n\n`;
+    script += `${parentName}: (firmly) This is not what we planned for you!\n`;
+    script += `${hero}: (frustrated) But this is what I want to do with my life!\n`;
+    script += `${Math.random() > 0.5 ? friend : heroine}: (trying to mediate) Let's all calm down and discuss this properly.\n\n`;
   } else if (isSocial) {
     script += `[${hero} witnesses a social injustice that motivates him to take action.]\n\n`;
-    script += `Village Head: This is how things have always been done here.\n`;
-    script += `${hero}: But that doesn't make it right. Something needs to change.\n\n`;
+    script += `Villager: This is how things have always been done here. Nobody has ever questioned it.\n`;
+    script += `${hero}: (with determination) That doesn't make it right. Something needs to change.\n`;
+    script += `${Math.random() > 0.5 ? friend : heroine}: (supportive) If anyone can make a difference, it's you.\n\n`;
   } else {
     script += `[An unexpected event disrupts ${hero}'s normal life.]\n\n`;
-    script += `${friend}: Everything's about to change. Are you ready?\n`;
-    script += `${hero}: I don't have a choice, do I?\n\n`;
+    script += `${friend}: (excited) Everything's about to change. Are you ready?\n`;
+    script += `${hero}: (uncertain) I don't have a choice, do I?\n`;
+    script += `${Math.random() > 0.5 ? friend : heroine}: (reassuring) Sometimes the best things in life aren't choices, they're destiny.\n\n`;
   }
   
-  // Scenes 3-6 (condensed for brevity)
+  // Middle scenes condensed for brevity
   script += `SCENES 3-6 - RISING ACTION\n`;
-  script += `[Multiple locations - Various times of day]\n\n`;
-  script += `[The story develops with obstacles and challenges for ${hero}. Relationships evolve and tensions rise.]\n\n`;
+  script += `[Multiple locations in ${mainLocation} and ${secondLocation} - Various times of day]\n\n`;
+  script += `[The story develops as ${hero} navigates challenges and relationships evolve. ${plotTwist} Tensions rise as stakes become higher.]\n\n`;
+  script += `${hero}: (expressing ${randomEmotion1}) I never thought it would come to this.\n`;
+  script += `${heroine}: Sometimes we don't know our own strength until we're tested.\n`;
+  script += `${friend}: (supportive but concerned) Be careful about the choices you make now - they'll define everything that follows.\n\n`;
   
-  // Scene 7
+  // Climax scene
   script += `SCENE 7 - CLIMAX\n`;
-  script += `LOCATION: Dramatic setting - Evening\n\n`;
+  script += `LOCATION: ${Math.random() > 0.5 ? 'Dramatic confrontation at ' + (Math.random() > 0.5 ? 'the heart of ' + mainLocation : 'a symbolic location in ' + secondLocation) : randomWeather + ' setting that mirrors the emotional turmoil'} - ${randomTime3}\n\n`;
   
   if (isLove) {
     script += `[${hero} and ${heroine} face the biggest obstacle to their relationship.]\n\n`;
-    script += `${hero}: No matter what happens, I will always love you.\n`;
-    script += `${heroine}: We'll face this together, like we've faced everything else.\n\n`;
+    script += `${hero}: (emotional) No matter what happens, I will always ${Math.random() > 0.5 ? 'love you' : 'fight for us'}.\n`;
+    script += `${heroine}: (with equal emotion) We'll face this together, like we've faced everything else.\n`;
+    script += `${Math.random() > 0.5 ? rival : parentName}: (challenging) Some things are simply impossible, no matter how much you want them.\n\n`;
   } else if (isFriendship) {
-    script += `[${hero} makes a sacrifice to save ${friend}'s reputation/life.]\n\n`;
-    script += `${friend}: Why would you do this for me?\n`;
-    script += `${hero}: Because that's what friends do. They stand by each other, no matter what.\n\n`;
+    script += `[${hero} makes a sacrifice to help ${friend}.]\n\n`;
+    script += `${friend}: (shocked) Why would you do this for me?\n`;
+    script += `${hero}: (sincere) Because that's what friends do. They stand by each other, no matter what.\n`;
+    script += `${heroine}: (witnessing the moment) True friendship is the rarest gift in this world.\n\n`;
   } else if (isFamily) {
     script += `[Family conflict reaches its peak with emotional confrontations.]\n\n`;
     script += `${hero}: (emotional) All I ever wanted was your support!\n`;
-    script += `Father: (realizing his mistake) I thought I was protecting you, but I was only holding you back.\n\n`;
+    script += `${parentName}: (realizing) I thought I was protecting you, but I was only holding you back.\n`;
+    script += `${Math.random() > 0.5 ? friend : heroine}: Sometimes the people who love us the most understand us the least.\n\n`;
   } else if (isSocial) {
-    script += `[${hero} confronts the village head in a public gathering.]\n\n`;
-    script += `${hero}: This stops today. We deserve better, and we will fight for it!\n`;
-    script += `Village Head: You're just one person. What can you possibly do?\n`;
-    script += `${heroine}: (stepping forward) He's not alone. We stand with him.\n\n`;
+    script += `[${hero} confronts the opposition in a public gathering.]\n\n`;
+    script += `${hero}: (passionate) This stops today. We deserve better, and we will fight for it!\n`;
+    script += `Opponent: You're just one person. What can you possibly do?\n`;
+    script += `${heroine}: (stepping forward) He's not alone. We stand with him.\n`;
+    script += `${friend}: (joining them) All of us do.\n\n`;
   } else {
     script += `[${hero} faces his biggest challenge yet.]\n\n`;
-    script += `${hero}: (determined) This is the moment that defines who I am.\n\n`;
+    script += `${hero}: (determined) This is the moment that defines who I am.\n`;
+    script += `${heroine}: (supporting) And I believe in who you are.\n`;
+    script += `${friend}: We all do.\n\n`;
   }
   
-  // Scene 8
+  // Resolution scene
   script += `SCENE 8 - RESOLUTION\n`;
-  script += `LOCATION: Meaningful setting - Sunset/Sunrise (symbolic of new beginnings)\n\n`;
+  script += `LOCATION: ${Math.random() > 0.5 ? 'Meaningful setting in ' + mainLocation : 'Return to where it all began'} - ${Math.random() > 0.5 ? 'Sunset' : 'Sunrise'} (symbolic of new beginnings)\n\n`;
   
   if (isLove) {
-    script += `[${hero} and ${heroine} overcome all obstacles and their love prevails.]\n\n`;
-    script += `${hero}: We've proven that our love is stronger than any obstacle.\n`;
-    script += `${heroine}: This is just the beginning of our journey together.\n\n`;
+    script += `[${hero} and ${heroine} overcome all obstacles, their love prevailing.]\n\n`;
+    script += `${hero}: (with ${randomEmotion2}) We've proven that our love is stronger than any obstacle.\n`;
+    script += `${heroine}: (smiling) This is just the beginning of our journey together.\n`;
+    script += `${friend}: (happy for them) Some stories don't need an ending, just a new chapter.\n\n`;
   } else if (isFriendship) {
     script += `[${hero} and ${friend} reconcile, their friendship stronger than ever.]\n\n`;
     script += `${friend}: Our friendship has been tested, but it never broke.\n`;
-    script += `${hero}: Some bonds can never be broken.\n\n`;
+    script += `${hero}: Some bonds can never be broken.\n`;
+    script += `${heroine}: (observing) You two remind the world what true friendship means.\n\n`;
   } else if (isFamily) {
     script += `[Family reconciliation and acceptance.]\n\n`;
-    script += `Father: I'm proud of you, son. I always have been.\n`;
+    script += `${parentName}: I'm proud of you. I always have been.\n`;
     script += `${hero}: Thank you for believing in me, finally.\n`;
-    script += `Mother: (smiling) We're family. Through thick and thin.\n\n`;
+    script += `${Math.random() > 0.5 ? friend : heroine}: (smiling) Family isn't always perfect, but it's always family.\n\n`;
   } else if (isSocial) {
-    script += `[The village begins to see positive changes from ${hero}'s initiatives.]\n\n`;
-    script += `Elder: You've brought hope back to our village.\n`;
-    script += `${hero}: We did it together. This is just the beginning.\n\n`;
+    script += `[The community begins to see positive changes from ${hero}'s initiatives.]\n\n`;
+    script += `Elder: You've brought hope back to our community.\n`;
+    script += `${hero}: We did it together. This is just the beginning.\n`;
+    script += `${heroine}: Sometimes all people need is someone brave enough to take the first step.\n\n`;
   } else {
     script += `[${hero} emerges transformed from his journey.]\n\n`;
     script += `${hero}: I'm not the same person I was when this all began.\n`;
-    script += `${friend}: For what it's worth, I like this version of you better.\n\n`;
+    script += `${friend}: For what it's worth, I like this version of you better.\n`;
+    script += `${heroine}: That's the beauty of life - we're constantly evolving.\n\n`;
   }
   
   // Ending
   script += `FINAL SCENE - EPILOGUE\n`;
-  script += `LOCATION: Symbolic location - New day\n\n`;
+  script += `LOCATION: ${Math.random() > 0.5 ? 'Symbolic location showing growth and change' : 'Looking out over ' + mainLocation} - New day\n\n`;
   script += `[The story concludes with a sense of closure but also hints at future possibilities.]\n\n`;
   script += `${hero}: (voiceover) Sometimes the end of one story is just the beginning of another...\n\n`;
   
@@ -308,9 +409,11 @@ function createStructuredScript(prompt, options = {}) {
   
   script += `PRODUCTION NOTES:\n`;
   script += `- The film should capture authentic ${language} cultural elements\n`;
-  script += `- Music should emphasize emotional moments\n`;
+  script += `- Music should emphasize emotional moments and reflect the ${genre.toLowerCase()} genre\n`;
   script += `- Consider shooting in natural locations for authenticity\n`;
   script += `- Focus on character development through close-ups and meaningful dialogue\n`;
+  script += `- The color palette should shift throughout the story to reflect the emotional journey\n`;
   
   return script;
 }
+
