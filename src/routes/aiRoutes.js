@@ -46,7 +46,6 @@ aiRouter.post('/ai/analyze', async (req, res) => {
       return res.status(400).json({ error: 'Text is required' });
     }
     
-    // Using summarization as a form of analysis for now
     const analysis = await summarizeText(text);
     res.json({ analysis });
   } catch (error) {
@@ -104,3 +103,4 @@ aiRouter.post('/ai/script-generation', async (req, res) => {
     res.status(500).json({ error: error.message || 'Script generation failed' });
   }
 });
+

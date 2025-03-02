@@ -13,6 +13,7 @@ import { fileURLToPath } from 'url';
 import { textRouter } from './routes/textRoutes.js';
 import { aiRouter } from './routes/aiRoutes.js';
 import { mediaRouter } from './routes/mediaRoutes.js';
+import { initializeModels } from './services/aiService.js';
 
 // Get directory name in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -53,6 +54,17 @@ app.use(morgan('dev'));
 
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Initialize AI models
+(async () => {
+  try {
+    await initializeModels();
+    console.log('✅ All services initialized');
+  } catch (error) {
+    console.error('⚠️ Service initialization error:', error.message);
+    console.log('🔄 API will still function with alternative implementations');
+  }
+})();
 
 // Routes
 app.use('/api', textRouter);
