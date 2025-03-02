@@ -49,16 +49,6 @@ functions:
       BASE_URL: !Join ['', ['https://', !Ref ApiGatewayRestApi, '.execute-api.', '${self:provider.region}', '.amazonaws.com/', '${self:provider.stage}']]
     reservedConcurrency: 100
     provisionedConcurrency: 5
-    # Configure auto-scaling for higher loads
-    # Uncomment below to enable auto-scaling
-    # events:
-    #   - schedule:
-    #       rate: rate(5 minutes)
-    #       enabled: true
-    #     concurrencyAutoscaling: true
-    #     concurrencyTargetValue: 0.7
-    #     concurrencyMinCapacity: 5
-    #     concurrencyMaxCapacity: 100
 
 package:
   individually: true
