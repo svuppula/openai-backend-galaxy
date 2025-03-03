@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { Toaster, toast } from 'sonner'
 
 const App = () => {
-  const [text, setText] = useState("Once upon a time in a distant land, there lived a wise sage who shared knowledge with all who sought it. The sage's words would transform into vivid stories that captivated listeners and transported them to magical realms of imagination.");
+  const [text, setText] = useState("Create an engaging YouTube thumbnail for a tech review video about the latest smartphones");
   const [loading, setLoading] = useState({
     tts: false,
     image: false,
@@ -12,10 +12,12 @@ const App = () => {
   });
   const [voiceType, setVoiceType] = useState('free'); // 'free' or 'premium'
   const [selectedVoice, setSelectedVoice] = useState('en-US'); // Default free voice
-  const [apiKey, setApiKey] = useState('');
-  const [availableVoices, setAvailableVoices] = useState({
-    free: [] as string[],
-    premium: {} as Record<string, string>
+  const [availableVoices, setAvailableVoices] = useState<{
+    free: string[];
+    premium: Record<string, string>;
+  }>({
+    free: [],
+    premium: {}
   });
 
   // Fetch available voices on component mount
@@ -37,7 +39,7 @@ const App = () => {
     fetchVoices();
   }, []);
 
-  const handleApiRequest = async (endpoint: string, data: any, type: 'tts' | 'image' | 'video' | 'animation') => {
+  const handleApiRequest = async (endpoint: string, data: Record<string, any>, type: 'tts' | 'image' | 'video' | 'animation') => {
     try {
       setLoading(prev => ({ ...prev, [type]: true }));
       const response = await fetch(`/api/media/${endpoint}`, {
@@ -92,10 +94,9 @@ const App = () => {
 
   const handleTextToSpeech = () => {
     // We'll make the API key optional
-    const ttsData: { text: string; voice: string; useLocalModel?: boolean } = { 
+    const ttsData: { text: string; voice: string } = { 
       text,
-      voice: selectedVoice,
-      useLocalModel: voiceType === 'free' // Use local model for free voices
+      voice: selectedVoice
     };
     
     handleApiRequest('text-to-speech', ttsData, 'tts');
@@ -107,7 +108,7 @@ const App = () => {
 
   return (
     <div className="container mx-auto p-4 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-6">Collaborators World API</h1>
+      <h1 className="text-3xl font-bold mb-6">Collaborators World Media Tools</h1>
       
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4">Generate Media from Text</h2>
@@ -121,7 +122,7 @@ const App = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-md min-h-[150px]"
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Enter text for generation..."
+              placeholder="Enter text for thumbnail generation or text-to-speech..."
             />
           </div>
           
@@ -186,7 +187,7 @@ const App = () => {
                   onChange={(e) => setSelectedVoice(e.target.value)}
                 >
                   {Object.entries(availableVoices.premium).map(([name, id]) => (
-                    <option key={id as string} value={name}>{name}</option>
+                    <option key={id} value={name}>{name}</option>
                   ))}
                 </select>
               </div>
@@ -211,7 +212,7 @@ const App = () => {
               onClick={handleGenerateImage}
               disabled={loading.image || !text}
             >
-              {loading.image ? 'Generating...' : 'Generate Scenic Images'}
+              {loading.image ? 'Generating...' : 'Generate YouTube Thumbnails'}
             </button>
 
             <button
@@ -252,7 +253,7 @@ const App = () => {
         </p>
         <div className="text-sm text-gray-600 space-y-2">
           <p>• POST /api/media/text-to-speech - Convert text to speech (MP3)</p>
-          <p>• POST /api/media/generate-image - Generate scenic images from text</p>
+          <p>• POST /api/media/generate-image - Generate YouTube thumbnails from text</p>
           <p>• POST /api/media/generate-video - Generate video content</p>
           <p>• POST /api/media/generate-animation - Generate animation content</p>
           <p>• POST /api/media/clone-voice - Clone a voice using local models</p>
