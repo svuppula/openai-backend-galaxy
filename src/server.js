@@ -1,30 +1,24 @@
 
 import express from 'express';
 import cors from 'cors';
-import morgan from 'morgan';
-import swaggerJsdoc from 'swagger-jsdoc';
-import swaggerUi from 'swagger-ui-express';
 import serverless from 'serverless-http';
-import fs from 'fs-extra';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-// Import route modules
-import { textRouter } from './routes/textRoutes.js';
-import { aiRouter } from './routes/aiRoutes.js';
+import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
+import swaggerJSDoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
 import { mediaRouter } from './routes/mediaRoutes.js';
-import { initializeModels } from './services/aiService.js';
 
-// Get directory name in ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Ensure temp directory exists
-const tempDir = path.join(process.cwd(), 'temp');
-fs.ensureDirSync(tempDir);
-
+// Create Express app
 const app = express();
-const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(helmet());
+app.use(compression());
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(morgan('dev'));
 
 // Swagger configuration
 const swaggerOptions = {
@@ -33,91 +27,41 @@ const swaggerOptions = {
     info: {
       title: 'Collaborators World API',
       version: '1.0.0',
-      description: 'API documentation for collaborative text generation and media services',
+      description: 'APIs for media generation and transformation'
     },
     servers: [
       {
-        url: process.env.BASE_URL || `http://localhost:${PORT}`,
-        description: 'API Server',
-      },
-    ],
+        url: process.env.BASE_URL || 'http://localhost:3000'
+      }
+    ]
   },
-  apis: ['./src/routes/*.js'],
+  apis: ['./src/routes/*.js']
 };
 
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
-
-// Middleware
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(morgan('dev'));
-
-// Static files
-app.use(express.static(path.join(__dirname, '../public')));
-
-// Initialize AI models
-(async () => {
-  try {
-    await initializeModels();
-    console.log('✅ All services initialized');
-  } catch (error) {
-    console.error('⚠️ Service initialization error:', error.message);
-    console.log('🔄 API will still function with alternative implementations');
-  }
-})();
-
-// Routes
-app.use('/api', textRouter);
-app.use('/api', aiRouter);
-app.use('/api', mediaRouter);
-
-// Swagger UI
+const swaggerSpec = swaggerJSDoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Health check
+// Add API routes
+app.use('/api', mediaRouter);
+
+// Health check route
 app.get('/health', (req, res) => {
-  res.json({ status: 'healthy', mode: 'serverless' });
+  res.json({ status: 'healthy' });
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(500).json({ 
-    error: err.message || 'Something went wrong! Please try again later.' 
-  });
+// Root route that redirects to API docs
+app.get('/', (req, res) => {
+  res.redirect('/api-docs');
 });
+
+// Server export for serverless environments
+export const handler = serverless(app);
 
 // For local development
 if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-    console.log(`Swagger documentation available at http://localhost:${PORT}/api-docs`);
+    console.log(`Server running on port ${PORT}`);
+    console.log(`API documentation available at http://localhost:${PORT}/api-docs`);
   });
 }
-
-// Cleanup function for temp directory
-const cleanupTempFiles = () => {
-  try {
-    const files = fs.readdirSync(tempDir);
-    const currentTime = new Date().getTime();
-    
-    files.forEach(file => {
-      const filePath = path.join(tempDir, file);
-      const stats = fs.statSync(filePath);
-      const fileAge = currentTime - stats.mtime.getTime();
-      
-      // Remove files older than 1 hour (3600000 ms)
-      if (fileAge > 3600000) {
-        fs.removeSync(filePath);
-      }
-    });
-  } catch (error) {
-    console.error('Error cleaning up temp files:', error);
-  }
-};
-
-// Set up periodic cleanup
-setInterval(cleanupTempFiles, 3600000); // Run every hour
-
-// Export the serverless handler for AWS Lambda
-export const handler = serverless(app);
