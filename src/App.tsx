@@ -14,8 +14,8 @@ const App = () => {
   const [selectedVoice, setSelectedVoice] = useState('en-US'); // Default free voice
   const [apiKey, setApiKey] = useState('');
   const [availableVoices, setAvailableVoices] = useState({
-    free: [],
-    premium: {}
+    free: [] as string[],
+    premium: {} as Record<string, string>
   });
 
   // Fetch available voices on component mount
@@ -37,7 +37,7 @@ const App = () => {
     fetchVoices();
   }, []);
 
-  const handleApiRequest = async (endpoint, data, type) => {
+  const handleApiRequest = async (endpoint: string, data: any, type: 'tts' | 'image' | 'video' | 'animation') => {
     try {
       setLoading(prev => ({ ...prev, [type]: true }));
       const response = await fetch(`/api/media/${endpoint}`, {
@@ -80,23 +80,23 @@ const App = () => {
       toast.success(`${capitalizeFirstLetter(endpoint.replace(/-/g, ' '))} downloaded successfully`);
     } catch (error) {
       console.error(`${endpoint} error:`, error);
-      toast.error(error.message || `Failed to generate ${endpoint.replace(/-/g, ' ')}`);
+      toast.error(error instanceof Error ? error.message : `Failed to generate ${endpoint.replace(/-/g, ' ')}`);
     } finally {
       setLoading(prev => ({ ...prev, [type]: false }));
     }
   };
 
-  const capitalizeFirstLetter = (string) => {
+  const capitalizeFirstLetter = (string: string) => {
     return string.charAt(0).toUpperCase() + string.slice(1);
   };
 
   const handleTextToSpeech = () => {
-    const ttsData = { 
+    const ttsData: { text: string; voice: string; apiKey?: string } = { 
       text,
       voice: selectedVoice
     };
     
-    // Add API key for premium voices
+    // Add API key for premium voices only if provided
     if (voiceType === 'premium' && apiKey) {
       ttsData.apiKey = apiKey;
     }
@@ -172,7 +172,7 @@ const App = () => {
                   value={selectedVoice}
                   onChange={(e) => setSelectedVoice(e.target.value)}
                 >
-                  {availableVoices.free.map(voice => (
+                  {availableVoices.free.map((voice) => (
                     <option key={voice} value={voice}>{voice}</option>
                   ))}
                 </select>
@@ -205,7 +205,7 @@ const App = () => {
                     disabled={!apiKey}
                   >
                     {Object.entries(availableVoices.premium).map(([name, id]) => (
-                      <option key={id} value={name}>{name}</option>
+                      <option key={id as string} value={name}>{name}</option>
                     ))}
                   </select>
                 </div>
