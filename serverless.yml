@@ -25,6 +25,7 @@ provider:
   environment:
     NODE_ENV: production
     STAGE: ${self:provider.stage}
+    ELEVENLABS_API_URL: "https://api.elevenlabs.io/v1"
     
   # Configure IAM role
   iam:
@@ -36,6 +37,12 @@ provider:
             - logs:CreateLogStream
             - logs:PutLogEvents
           Resource: arn:aws:logs:*:*:*
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+            - s3:DeleteObject
+          Resource: !Join ['', ['arn:aws:s3:::', !Ref TtsOutputBucket, '/*']]
 
 functions:
   api:
@@ -47,8 +54,9 @@ functions:
           cors: true
     environment:
       BASE_URL: !Join ['', ['https://', !Ref ApiGatewayRestApi, '.execute-api.', '${self:provider.region}', '.amazonaws.com/', '${self:provider.stage}']]
-    reservedConcurrency: 100
-    provisionedConcurrency: 5
+      TTS_BUCKET: !Ref TtsOutputBucket
+    reservedConcurrency: 500  # Increased for higher scale
+    provisionedConcurrency: 10  # Increased for higher scale
 
 package:
   individually: true
@@ -78,6 +86,22 @@ custom:
 
 resources:
   Resources:
+    # S3 bucket for TTS output files
+    TtsOutputBucket:
+      Type: 'AWS::S3::Bucket'
+      Properties:
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders: ['*']
+              AllowedMethods: [GET, PUT, POST, DELETE]
+              AllowedOrigins: ['*']
+              MaxAge: 3000
+        LifecycleConfiguration:
+          Rules:
+            - Id: DeleteAfter24Hours
+              Status: Enabled
+              ExpirationInDays: 1  # Auto-delete files after 1 day to save storage
+    
     # CloudFront distribution for global content delivery
     CloudFrontDistribution:
       Type: AWS::CloudFront::Distribution
@@ -109,3 +133,18 @@ resources:
                 HTTPSPort: 443
                 OriginProtocolPolicy: https-only
           PriceClass: PriceClass_100
+          # Add caching for TTS responses
+          CacheBehaviors:
+            - PathPattern: /api/media/text-to-speech/*
+              TargetOriginId: ApiGateway
+              AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+              ForwardedValues:
+                QueryString: true
+                Headers: 
+                  - 'Origin'
+                  - 'Access-Control-Request-Headers'
+                  - 'Access-Control-Request-Method'
+              ViewerProtocolPolicy: redirect-to-https
+              MinTTL: 0
+              DefaultTTL: 3600  # Cache for an hour by default
+              MaxTTL: 86400  # Maximum cache of 1 day
