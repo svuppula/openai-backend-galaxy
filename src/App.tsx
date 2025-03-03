@@ -91,15 +91,12 @@ const App = () => {
   };
 
   const handleTextToSpeech = () => {
-    const ttsData: { text: string; voice: string; apiKey?: string } = { 
+    // We'll make the API key optional
+    const ttsData: { text: string; voice: string; useLocalModel?: boolean } = { 
       text,
-      voice: selectedVoice
+      voice: selectedVoice,
+      useLocalModel: voiceType === 'free' // Use local model for free voices
     };
-    
-    // Add API key for premium voices only if provided
-    if (voiceType === 'premium' && apiKey) {
-      ttsData.apiKey = apiKey;
-    }
     
     handleApiRequest('text-to-speech', ttsData, 'tts');
   };
@@ -143,7 +140,7 @@ const App = () => {
                   onChange={() => setVoiceType('free')}
                   className="mr-2"
                 />
-                <label htmlFor="free-voice">Free Voices</label>
+                <label htmlFor="free-voice">Free Voices (Local Model)</label>
               </div>
               
               <div className="flex items-center">
@@ -156,7 +153,7 @@ const App = () => {
                   onChange={() => setVoiceType('premium')}
                   className="mr-2"
                 />
-                <label htmlFor="premium-voice">Premium Voices (ElevenLabs)</label>
+                <label htmlFor="premium-voice">Premium Voices (No API Key Required)</label>
               </div>
             </div>
             
@@ -178,38 +175,21 @@ const App = () => {
                 </select>
               </div>
             ) : (
-              <>
-                <div className="mb-3">
-                  <label htmlFor="api-key" className="block text-sm font-medium mb-1">
-                    ElevenLabs API Key
-                  </label>
-                  <input
-                    type="password"
-                    id="api-key"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="Enter your ElevenLabs API key"
-                  />
-                </div>
-                
-                <div className="mb-3">
-                  <label htmlFor="premium-voice-select" className="block text-sm font-medium mb-1">
-                    Select Voice
-                  </label>
-                  <select
-                    id="premium-voice-select"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    value={selectedVoice}
-                    onChange={(e) => setSelectedVoice(e.target.value)}
-                    disabled={!apiKey}
-                  >
-                    {Object.entries(availableVoices.premium).map(([name, id]) => (
-                      <option key={id as string} value={name}>{name}</option>
-                    ))}
-                  </select>
-                </div>
-              </>
+              <div className="mb-3">
+                <label htmlFor="premium-voice-select" className="block text-sm font-medium mb-1">
+                  Select Voice
+                </label>
+                <select
+                  id="premium-voice-select"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  value={selectedVoice}
+                  onChange={(e) => setSelectedVoice(e.target.value)}
+                >
+                  {Object.entries(availableVoices.premium).map(([name, id]) => (
+                    <option key={id as string} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
             )}
           </div>
           
@@ -219,7 +199,7 @@ const App = () => {
                 ? 'bg-blue-300 cursor-not-allowed' 
                 : 'bg-blue-500 hover:bg-blue-600'} text-white font-medium transition-colors`}
               onClick={handleTextToSpeech}
-              disabled={loading.tts || !text || (voiceType === 'premium' && !apiKey)}
+              disabled={loading.tts || !text}
             >
               {loading.tts ? 'Generating...' : 'Generate Speech (MP3)'}
             </button>
@@ -275,7 +255,7 @@ const App = () => {
           <p>• POST /api/media/generate-image - Generate scenic images from text</p>
           <p>• POST /api/media/generate-video - Generate video content</p>
           <p>• POST /api/media/generate-animation - Generate animation content</p>
-          <p>• POST /api/media/clone-voice - Clone a voice using ElevenLabs (premium)</p>
+          <p>• POST /api/media/clone-voice - Clone a voice using local models</p>
           <p>• GET /api/media/available-voices - Get list of available voices</p>
         </div>
       </div>
