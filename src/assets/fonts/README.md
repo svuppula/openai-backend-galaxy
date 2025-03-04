@@ -1,6 +1,6 @@
 
 # Fonts Directory
 
-This directory is used to store font files for the application.
+This directory contains font files used by the application.
 
-The Roboto font will be downloaded automatically if needed for thumbnail generation.
+- Roboto-Bold.ttf - Used for thumbnail generation
