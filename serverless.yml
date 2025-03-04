@@ -20,12 +20,15 @@ provider:
     binaryMediaTypes:
       - 'image/*'
       - 'audio/*'
+      - 'application/zip'
+      - 'application/octet-stream'
   
   # Environment variables
   environment:
     NODE_ENV: production
     STAGE: ${self:provider.stage}
-    ELEVENLABS_API_URL: "https://api.elevenlabs.io/v1"
+    TEMP_DIR: '/tmp'
+    CACHE_TTL: 3600
     
   # Configure IAM role
   iam:
@@ -55,8 +58,8 @@ functions:
     environment:
       BASE_URL: !Join ['', ['https://', !Ref ApiGatewayRestApi, '.execute-api.', '${self:provider.region}', '.amazonaws.com/', '${self:provider.stage}']]
       TTS_BUCKET: !Ref TtsOutputBucket
-    reservedConcurrency: 500  # Increased for higher scale
-    provisionedConcurrency: 10  # Increased for higher scale
+    reservedConcurrency: 500  # For higher scale
+    provisionedConcurrency: 10  # For faster response times
 
 package:
   individually: true
@@ -133,11 +136,11 @@ resources:
                 HTTPSPort: 443
                 OriginProtocolPolicy: https-only
           PriceClass: PriceClass_100
-          # Add caching for TTS responses
+          # Add caching for media responses
           CacheBehaviors:
-            - PathPattern: /api/media/text-to-speech/*
+            - PathPattern: /*/media/text-to-speech/*
               TargetOriginId: ApiGateway
-              AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+              AllowedMethods: [GET, HEAD, OPTIONS]
               ForwardedValues:
                 QueryString: true
                 Headers: 
@@ -148,3 +151,32 @@ resources:
               MinTTL: 0
               DefaultTTL: 3600  # Cache for an hour by default
               MaxTTL: 86400  # Maximum cache of 1 day
+            - PathPattern: /*/media/generate-thumbnail/*
+              TargetOriginId: ApiGateway
+              AllowedMethods: [GET, HEAD, OPTIONS]
+              ForwardedValues:
+                QueryString: true
+                Headers: 
+                  - 'Origin'
+                  - 'Access-Control-Request-Headers'
+                  - 'Access-Control-Request-Method'
+              ViewerProtocolPolicy: redirect-to-https
+              MinTTL: 0
+              DefaultTTL: 3600
+              MaxTTL: 86400
+    
+    # DynamoDB for caching (optional, cost-effective alternative to Redis)
+    CacheTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-cache-${self:provider.stage}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: key
+            AttributeType: S
+        KeySchema:
+          - AttributeName: key
+            KeyType: HASH
+        TimeToLiveSpecification:
+          AttributeName: expires
+          Enabled: true

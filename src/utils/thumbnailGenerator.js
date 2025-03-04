@@ -1,233 +1,394 @@
 
+import { createCanvas, loadImage, registerFont } from 'canvas';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createCanvas, loadImage, registerFont } from 'canvas';
-import AdmZip from 'adm-zip';
-import fs from 'fs';
+import { dirname } from 'path';
 
-// Fix for __dirname in ES modules
+// Get the directory name for ES modules
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = dirname(__filename);
 
-// Register font for thumbnail text
+// Define path to font file using the __dirname variable
 const fontPath = path.join(__dirname, '../assets/fonts/Roboto-Bold.ttf');
 
-// Ensure the font directory exists
-const fontDir = path.dirname(fontPath);
-if (!fs.existsSync(fontDir)) {
-  fs.mkdirSync(fontDir, { recursive: true });
+// Check if font file exists and register it
+if (fs.existsSync(fontPath)) {
+  registerFont(fontPath, { family: 'Roboto' });
 }
 
-// Download Roboto font if it doesn't exist
-if (!fs.existsSync(fontPath)) {
-  const robotoUrl = 'https://github.com/google/fonts/raw/main/apache/roboto/Roboto-Bold.ttf';
-  
-  try {
-    const response = await fetch(robotoUrl);
-    const buffer = await response.arrayBuffer();
-    fs.writeFileSync(fontPath, Buffer.from(buffer));
-    console.log('Roboto-Bold.ttf downloaded successfully');
-  } catch (error) {
-    console.error('Error downloading Roboto font:', error);
-    // Fallback: Don't register the font, use system default
-  }
-}
-
-// Register font if it exists
-try {
-  if (fs.existsSync(fontPath)) {
-    registerFont(fontPath, { family: 'Roboto', weight: 'bold' });
-  }
-} catch (error) {
-  console.warn('Warning: Could not register font, using system default', error);
-}
-
-// Category-based background images (references to stock free images or colors)
-const categoryBackgrounds = {
-  tech: '#1e88e5', // Blue for tech
-  gaming: '#d32f2f', // Red for gaming
-  education: '#43a047', // Green for education
-  entertainment: '#f57c00', // Orange for entertainment
-  business: '#3949ab', // Indigo for business
-  health: '#00acc1', // Cyan for health
-  default: '#5e35b1', // Purple default
+// Color themes for different content categories
+const colorThemes = {
+  tech: ['#0062ff', '#00c6ff'],
+  nature: ['#00a86b', '#4caf50'],
+  business: ['#7b68ee', '#9370db'],
+  entertainment: ['#ff3e4d', '#ff7700'],
+  education: ['#4a90e2', '#5cb3ff'],
+  fitness: ['#e91e63', '#ff5e8f'],
+  food: ['#ff9800', '#ffeb3b'],
+  default: ['#6c5ce7', '#a29bfe']
 };
 
-// Icons for categories (emoji as text)
-const categoryIcons = {
-  tech: '💻',
-  gaming: '🎮',
-  education: '📚',
-  entertainment: '🎬',
-  business: '💼',
-  health: '❤️',
-  default: '🔍',
-};
-
-// Get category from text content
-function detectCategory(text) {
-  text = text.toLowerCase();
+// Theme-specific icon designs
+const drawThemeIcon = (ctx, category, width, height) => {
+  const centerX = width * 0.85;
+  const centerY = height * 0.15;
+  const size = Math.min(width, height) * 0.1;
   
-  if (/tech|computer|software|hardware|smartphone|gadget|digital|algorithm|code|programming/.test(text)) {
-    return 'tech';
-  }
-  if (/game|gaming|play|console|xbox|playstation|nintendo|fortnite|minecraft/.test(text)) {
-    return 'gaming';
-  }
-  if (/education|learn|school|college|university|course|study|knowledge|teach|academic/.test(text)) {
-    return 'education';
-  }
-  if (/movie|film|music|entertain|show|theater|concert|performance|streaming|netflix/.test(text)) {
-    return 'entertainment';
-  }
-  if (/business|company|startup|entrepreneur|finance|invest|stock|market|corporate|economy/.test(text)) {
-    return 'business';
-  }
-  if (/health|workout|fitness|exercise|diet|nutrition|medical|wellness|yoga|doctor/.test(text)) {
-    return 'health';
-  }
+  ctx.save();
   
-  return 'default';
-}
-
-// Make text fit on canvas
-function fitTextOnCanvas(ctx, text, maxWidth, fontSize, fontFamily) {
-  // Start with the provided font size
-  let size = fontSize;
-  ctx.font = `bold ${size}px ${fontFamily}`;
-  
-  // Measure width of text
-  let width = ctx.measureText(text).width;
-  
-  // If text is wider than canvas, shrink it
-  while (width > maxWidth && size > 12) {
-    size -= 2;
-    ctx.font = `bold ${size}px ${fontFamily}`;
-    width = ctx.measureText(text).width;
-  }
-  
-  return size;
-}
-
-// Word wrap function
-function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-  const words = text.split(' ');
-  let line = '';
-  const lines = [];
-
-  for (let i = 0; i < words.length; i++) {
-    const testLine = line + words[i] + ' ';
-    const metrics = ctx.measureText(testLine);
-    const testWidth = metrics.width;
-    
-    if (testWidth > maxWidth && i > 0) {
-      lines.push(line);
-      line = words[i] + ' ';
-    } else {
-      line = testLine;
-    }
-  }
-  
-  lines.push(line);
-  
-  for (let i = 0; i < lines.length; i++) {
-    ctx.fillText(lines[i], x, y + (i * lineHeight));
-  }
-  
-  return lines.length;
-}
-
-// Extract keywords from prompt
-function extractKeywords(text) {
-  // Simple keyword extraction - remove common words and get remaining words
-  const commonWords = ['a', 'an', 'the', 'and', 'or', 'but', 'for', 'nor', 'on', 'at', 'to', 'from', 'by'];
-  return text
-    .split(' ')
-    .filter(word => word.length > 3 && !commonWords.includes(word.toLowerCase()))
-    .slice(0, 3)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1));
-}
-
-// Generate thumbnails with different aspect ratios and styles
-export async function generateYouTubeThumbnails(prompt) {
-  console.log('Generating YouTube thumbnails for prompt:', prompt);
-  const category = detectCategory(prompt);
-  const backgroundColor = categoryBackgrounds[category];
-  const icon = categoryIcons[category];
-  const keywords = extractKeywords(prompt);
-  
-  // Zip file to store the thumbnails
-  const zip = new AdmZip();
-  
-  try {
-    // Different thumbnail sizes
-    const thumbnailSizes = [
-      { width: 1280, height: 720, name: 'standard' }, // 16:9 Standard
-      { width: 1280, height: 800, name: 'square-ish' }, // More square format
-      { width: 1280, height: 1024, name: 'vertical' }, // More vertical
-    ];
-    
-    // Create multiple thumbnail variations
-    for (const size of thumbnailSizes) {
-      // Create canvas with the specified dimensions
-      const canvas = createCanvas(size.width, size.height);
-      const ctx = canvas.getContext('2d');
-      
-      // Fill background
-      ctx.fillStyle = backgroundColor;
-      ctx.fillRect(0, 0, size.width, size.height);
-      
-      // Add diagonal stripe
+  switch(category.toLowerCase()) {
+    case 'tech':
+      // Draw gear icon
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = size * 0.1;
       ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(size.width, size.height);
-      ctx.lineWidth = size.width / 3;
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.arc(centerX, centerY, size * 0.7, 0, Math.PI * 2);
       ctx.stroke();
       
-      // Add category icon
-      const iconSize = Math.min(size.width, size.height) / 4;
-      ctx.font = `${iconSize}px Arial`;
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(icon, size.width - iconSize, iconSize);
+      // Draw gear teeth
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const x1 = centerX + Math.cos(angle) * size * 0.7;
+        const y1 = centerY + Math.sin(angle) * size * 0.7;
+        const x2 = centerX + Math.cos(angle) * size;
+        const y2 = centerY + Math.sin(angle) * size;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+      break;
       
-      // Add title text
-      const fontFamily = fs.existsSync(fontPath) ? 'Roboto' : 'Arial, sans-serif';
-      let fontSize = Math.min(size.width, size.height) / 10;
-      fontSize = fitTextOnCanvas(ctx, prompt, size.width - 60, fontSize, fontFamily);
+    case 'nature':
+      // Draw leaf icon
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.ellipse(centerX, centerY, size * 0.7, size * 0.4, Math.PI / 4, 0, Math.PI * 2);
+      ctx.fill();
       
-      ctx.font = `bold ${fontSize}px ${fontFamily}`;
-      ctx.fillStyle = 'white';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
+      ctx.beginPath();
+      ctx.moveTo(centerX - size * 0.3, centerY + size * 0.3);
+      ctx.quadraticCurveTo(centerX, centerY, centerX + size * 0.3, centerY - size * 0.3);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = size * 0.1;
+      ctx.stroke();
+      break;
       
-      const lineHeight = fontSize * 1.2;
-      const textX = 40;
-      const textY = size.height / 2;
-      wrapText(ctx, prompt, textX, textY, size.width - 80, lineHeight);
+    case 'business':
+      // Draw chart icon
+      ctx.fillStyle = '#ffffff';
       
-      // Add keywords at the bottom
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      ctx.fillRect(0, size.height - 60, size.width, 60);
+      // Bar chart
+      ctx.fillRect(centerX - size * 0.6, centerY, size * 0.2, size * 0.5);
+      ctx.fillRect(centerX - size * 0.3, centerY - size * 0.3, size * 0.2, size * 0.8);
+      ctx.fillRect(centerX, centerY - size * 0.1, size * 0.2, size * 0.6);
+      ctx.fillRect(centerX + size * 0.3, centerY - size * 0.5, size * 0.2, size);
       
-      ctx.font = `bold ${Math.min(size.width, size.height) / 20}px ${fontFamily}`;
-      ctx.fillStyle = 'white';
-      ctx.textAlign = 'center';
-      ctx.fillText(keywords.join(' • '), size.width / 2, size.height - 30);
+      // X axis
+      ctx.fillRect(centerX - size * 0.7, centerY + size * 0.5, size * 1.4, size * 0.1);
+      break;
       
-      // Add the thumbnail to the zip
-      const buffer = canvas.toBuffer('image/jpeg', { quality: 0.9 });
-      zip.addFile(`youtube-thumbnail-${size.name}.jpg`, buffer);
+    case 'entertainment':
+      // Draw play button
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(centerX - size * 0.4, centerY - size * 0.6);
+      ctx.lineTo(centerX + size * 0.6, centerY);
+      ctx.lineTo(centerX - size * 0.4, centerY + size * 0.6);
+      ctx.closePath();
+      ctx.fill();
+      break;
       
-      console.log(`Generated ${size.name} thumbnail`);
+    case 'education':
+      // Draw book icon
+      ctx.fillStyle = '#ffffff';
+      
+      // Book cover
+      ctx.fillRect(centerX - size * 0.6, centerY - size * 0.6, size * 1.2, size * 1.2);
+      
+      // Book spine
+      ctx.fillStyle = colorThemes.education[0];
+      ctx.fillRect(centerX - size * 0.7, centerY - size * 0.6, size * 0.1, size * 1.2);
+      
+      // Book lines
+      ctx.fillStyle = colorThemes.education[0];
+      ctx.fillRect(centerX - size * 0.4, centerY - size * 0.3, size * 0.8, size * 0.1);
+      ctx.fillRect(centerX - size * 0.4, centerY, size * 0.8, size * 0.1);
+      ctx.fillRect(centerX - size * 0.4, centerY + size * 0.3, size * 0.8, size * 0.1);
+      break;
+      
+    case 'fitness':
+      // Draw dumbbell
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = size * 0.2;
+      
+      // Bar
+      ctx.beginPath();
+      ctx.moveTo(centerX - size * 0.5, centerY);
+      ctx.lineTo(centerX + size * 0.5, centerY);
+      ctx.stroke();
+      
+      // Weights
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(centerX - size * 0.8, centerY - size * 0.3, size * 0.3, size * 0.6);
+      ctx.fillRect(centerX + size * 0.5, centerY - size * 0.3, size * 0.3, size * 0.6);
+      break;
+      
+    case 'food':
+      // Draw fork and knife
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = size * 0.1;
+      
+      // Fork
+      ctx.beginPath();
+      ctx.moveTo(centerX - size * 0.3, centerY - size * 0.6);
+      ctx.lineTo(centerX - size * 0.3, centerY + size * 0.4);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(centerX - size * 0.5, centerY - size * 0.6);
+      ctx.lineTo(centerX - size * 0.3, centerY - size * 0.3);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(centerX - size * 0.3, centerY - size * 0.6);
+      ctx.lineTo(centerX - size * 0.3, centerY - size * 0.3);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(centerX - size * 0.1, centerY - size * 0.6);
+      ctx.lineTo(centerX - size * 0.3, centerY - size * 0.3);
+      ctx.stroke();
+      
+      // Knife
+      ctx.beginPath();
+      ctx.moveTo(centerX + size * 0.3, centerY - size * 0.6);
+      ctx.lineTo(centerX + size * 0.3, centerY + size * 0.4);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(centerX + size * 0.1, centerY - size * 0.6);
+      ctx.lineTo(centerX + size * 0.5, centerY - size * 0.3);
+      ctx.lineTo(centerX + size * 0.3, centerY - size * 0.1);
+      ctx.closePath();
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      break;
+      
+    default:
+      // Draw star icon for default
+      ctx.fillStyle = '#ffffff';
+      const spikes = 5;
+      const outerRadius = size;
+      const innerRadius = size * 0.4;
+      
+      ctx.beginPath();
+      for (let i = 0; i < spikes * 2; i++) {
+        const radius = i % 2 === 0 ? outerRadius : innerRadius;
+        const angle = (i / (spikes * 2)) * Math.PI * 2 - Math.PI / 2;
+        const x = centerX + Math.cos(angle) * radius;
+        const y = centerY + Math.sin(angle) * radius;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fill();
+  }
+  
+  ctx.restore();
+};
+
+// Function to detect category from text
+const detectCategory = (text) => {
+  text = text.toLowerCase();
+  
+  const keywords = {
+    tech: ['technology', 'software', 'hardware', 'programming', 'computer', 'ai', 'code', 'app', 'digital', 'smartphone', 'internet', 'coding', 'tech', 'developer', 'web', 'mobile'],
+    nature: ['nature', 'environment', 'plant', 'animal', 'green', 'eco', 'outdoor', 'garden', 'forest', 'wildlife', 'mountain', 'landscape', 'climate', 'conservation', 'sustainable'],
+    business: ['business', 'finance', 'money', 'entrepreneur', 'market', 'economy', 'company', 'startup', 'investment', 'corporate', 'management', 'strategy', 'leadership', 'career'],
+    entertainment: ['entertainment', 'movie', 'music', 'game', 'concert', 'celebrity', 'film', 'festival', 'tv', 'show', 'play', 'streaming', 'video', 'youtube', 'netflix', 'perform'],
+    education: ['education', 'learn', 'school', 'university', 'college', 'student', 'teacher', 'academic', 'course', 'study', 'knowledge', 'class', 'tutorial', 'lecture', 'training'],
+    fitness: ['fitness', 'workout', 'exercise', 'gym', 'health', 'diet', 'nutrition', 'muscle', 'training', 'weight', 'yoga', 'strength', 'cardio', 'wellness', 'running'],
+    food: ['food', 'recipe', 'cook', 'restaurant', 'meal', 'delicious', 'kitchen', 'bake', 'chef', 'tasty', 'cuisine', 'cooking', 'dish', 'flavor', 'ingredient', 'dinner']
+  };
+  
+  // Count occurrences of keywords from each category
+  let scores = {};
+  for (const [category, words] of Object.entries(keywords)) {
+    scores[category] = words.filter(word => text.includes(word)).length;
+  }
+  
+  // Find category with highest score
+  let maxScore = 0;
+  let detectedCategory = 'default';
+  
+  for (const [category, score] of Object.entries(scores)) {
+    if (score > maxScore) {
+      maxScore = score;
+      detectedCategory = category;
+    }
+  }
+  
+  return maxScore > 0 ? detectedCategory : 'default';
+};
+
+// Create a YouTube thumbnail
+const createYouTubeThumbnail = async (text, options = {}) => {
+  try {
+    // Default options
+    const width = options.width || 1280;
+    const height = options.height || 720;
+    const category = options.category || detectCategory(text);
+    const outputPath = options.outputPath || path.join(__dirname, '../../temp', `thumbnail-${Date.now()}.png`);
+    
+    // Create canvas
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+    
+    // Get theme colors
+    const themeColors = colorThemes[category] || colorThemes.default;
+    
+    // Create gradient background
+    const gradient = ctx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, themeColors[0]);
+    gradient.addColorStop(1, themeColors[1]);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+    
+    // Add theme-specific icon
+    drawThemeIcon(ctx, category, width, height);
+    
+    // Add a semi-transparent overlay for better text readability
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillRect(0, 0, width, height);
+    
+    // Add decorative elements
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 20;
+    
+    // Draw decorative lines
+    ctx.beginPath();
+    ctx.moveTo(0, height * 0.25);
+    ctx.lineTo(width * 0.3, height * 0.25);
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.moveTo(width * 0.7, height * 0.75);
+    ctx.lineTo(width, height * 0.75);
+    ctx.stroke();
+    
+    // Add corner accent
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(width * 0.2, 0);
+    ctx.lineTo(0, height * 0.2);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.beginPath();
+    ctx.moveTo(width, height);
+    ctx.lineTo(width * 0.8, height);
+    ctx.lineTo(width, height * 0.8);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Generate title text from input
+    let title = text;
+    if (text.length > 60) {
+      // Truncate and add ellipsis if too long
+      title = text.substring(0, 57) + '...';
     }
     
-    // Return the zip file
-    return zip.toBuffer();
+    // Drawing the main title
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = `bold ${Math.floor(height * 0.09)}px 'Roboto', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Shadow for better readability
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+    ctx.shadowBlur = 15;
+    ctx.shadowOffsetX = 5;
+    ctx.shadowOffsetY = 5;
+    
+    // Split into lines if needed
+    const words = title.split(' ');
+    let line = '';
+    let lines = [];
+    for (let i = 0; i < words.length; i++) {
+      const testLine = line + words[i] + ' ';
+      const metrics = ctx.measureText(testLine);
+      
+      if (metrics.width > width * 0.9 && i > 0) {
+        lines.push(line);
+        line = words[i] + ' ';
+      } else {
+        line = testLine;
+      }
+    }
+    lines.push(line); // Add the last line
+    
+    // Center vertically based on number of lines
+    const lineHeight = Math.floor(height * 0.1);
+    const totalTextHeight = lines.length * lineHeight;
+    let textY = (height - totalTextHeight) / 2;
+    
+    // Draw each line
+    lines.forEach((line, index) => {
+      ctx.fillText(line, width / 2, textY + (index * lineHeight));
+    });
+    
+    // Add a category tag
+    ctx.shadowBlur = 5;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+    
+    ctx.font = `bold ${Math.floor(height * 0.04)}px 'Roboto', sans-serif`;
+    const tagText = category.charAt(0).toUpperCase() + category.slice(1);
+    const tagMetrics = ctx.measureText(tagText);
+    const tagWidth = tagMetrics.width + 40;
+    const tagHeight = Math.floor(height * 0.06);
+    const tagX = 20;
+    const tagY = height - tagHeight - 20;
+    
+    // Tag background
+    ctx.fillStyle = themeColors[0];
+    ctx.fillRect(tagX, tagY, tagWidth, tagHeight);
+    
+    // Tag text
+    ctx.fillStyle = '#FFFFFF';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(tagText, tagX + 20, tagY + tagHeight / 2);
+    
+    // Reset shadow
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    
+    // Make sure the directory exists
+    const outputDir = path.dirname(outputPath);
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+    
+    // Save the image
+    const buffer = canvas.toBuffer('image/png');
+    fs.writeFileSync(outputPath, buffer);
+    
+    return {
+      path: outputPath,
+      width,
+      height,
+      category
+    };
   } catch (error) {
-    console.error('Error generating thumbnails:', error);
-    throw new Error('Failed to generate thumbnails');
+    console.error('Error creating thumbnail:', error);
+    throw error;
   }
-}
+};
+
+export default createYouTubeThumbnail;

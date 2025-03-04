@@ -7,9 +7,15 @@ import compression from 'compression';
 import serverless from 'serverless-http';
 import swaggerJsDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import mediaRoutes from './routes/mediaRoutes.js';
 import textRoutes from './routes/textRoutes.js';
-import aiRoutes from './routes/aiRoutes.js';
+import { aiRouter } from './routes/aiRoutes.js';
+
+// Get the directory name
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Initialize express app
 const app = express();
@@ -22,6 +28,9 @@ app.use(helmet());
 app.use(compression());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Create temp directory for file storage
+app.use('/temp', express.static(join(__dirname, '../temp')));
 
 // Swagger configuration
 const swaggerOptions = {
@@ -48,13 +57,18 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 // API Routes
 app.use('/media', mediaRoutes);
 app.use('/text', textRoutes);
-app.use('/ai', aiRoutes);
+app.use('/ai', aiRouter);
 
 // Root route
 app.get('/', (req, res) => {
   res.json({
     message: 'Welcome to Collaborators World API',
     documentation: '/api-docs',
+    endpoints: {
+      media: '/media',
+      text: '/text',
+      ai: '/ai'
+    }
   });
 });
 
@@ -62,6 +76,7 @@ app.get('/', (req, res) => {
 if (process.env.NODE_ENV !== 'test') {
   app.listen(port, () => {
     console.log(`Server running on port ${port}`);
+    console.log(`API documentation available at http://localhost:${port}/api-docs`);
   });
 }
 
