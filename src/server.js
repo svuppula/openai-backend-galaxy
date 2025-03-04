@@ -7,7 +7,17 @@ import compression from 'compression';
 import morgan from 'morgan';
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import { mediaRouter } from './routes/mediaRoutes.js';
+import fs from 'fs-extra';
+import path from 'path';
+import os from 'os';
+import { fileURLToPath } from 'url';
+
+// Fix for __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Import routes - fixed to use CommonJS require style export
+import mediaRoutes from './routes/mediaRoutes.js';
 
 // Create Express app
 const app = express();
@@ -42,7 +52,7 @@ const swaggerSpec = swaggerJSDoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Add API routes
-app.use('/api', mediaRouter);
+app.use('/api/media', mediaRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {
