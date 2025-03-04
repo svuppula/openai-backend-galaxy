@@ -15,9 +15,14 @@ const App = () => {
   const [availableVoices, setAvailableVoices] = useState<{
     free: string[];
     premium: Record<string, string>;
+    cloned?: Record<string, string>;
   }>({
-    free: [],
-    premium: {}
+    free: ['en-US', 'en-GB', 'fr-FR', 'de-DE', 'es-ES'],  // Default values in case API fails
+    premium: {
+      'American Male': 'en-us-male',
+      'American Female': 'en-us-female',
+    },
+    cloned: {}
   });
 
   // Fetch available voices on component mount
@@ -30,9 +35,11 @@ const App = () => {
           setAvailableVoices(voices);
         } else {
           console.error('Failed to fetch voices');
+          toast.error('Failed to load voices. Using default options.');
         }
       } catch (error) {
         console.error('Error fetching voices:', error);
+        toast.error('Could not connect to voice service. Using default options.');
       }
     };
 
@@ -156,6 +163,21 @@ const App = () => {
                 />
                 <label htmlFor="premium-voice">Premium Voices (No API Key Required)</label>
               </div>
+              
+              {availableVoices.cloned && Object.keys(availableVoices.cloned).length > 0 && (
+                <div className="flex items-center">
+                  <input
+                    type="radio"
+                    id="cloned-voice"
+                    name="voice-type"
+                    value="cloned"
+                    checked={voiceType === 'cloned'}
+                    onChange={() => setVoiceType('cloned')}
+                    className="mr-2"
+                  />
+                  <label htmlFor="cloned-voice">Cloned Voices</label>
+                </div>
+              )}
             </div>
             
             {/* Conditional inputs based on voice type */}
@@ -175,7 +197,7 @@ const App = () => {
                   ))}
                 </select>
               </div>
-            ) : (
+            ) : voiceType === 'premium' ? (
               <div className="mb-3">
                 <label htmlFor="premium-voice-select" className="block text-sm font-medium mb-1">
                   Select Voice
@@ -187,7 +209,23 @@ const App = () => {
                   onChange={(e) => setSelectedVoice(e.target.value)}
                 >
                   {Object.entries(availableVoices.premium).map(([name, id]) => (
-                    <option key={id} value={name}>{name}</option>
+                    <option key={id} value={id}>{name}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="mb-3">
+                <label htmlFor="cloned-voice-select" className="block text-sm font-medium mb-1">
+                  Select Cloned Voice
+                </label>
+                <select
+                  id="cloned-voice-select"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  value={selectedVoice}
+                  onChange={(e) => setSelectedVoice(e.target.value)}
+                >
+                  {availableVoices.cloned && Object.entries(availableVoices.cloned).map(([name, id]) => (
+                    <option key={id} value={id}>{name}</option>
                   ))}
                 </select>
               </div>

@@ -1,77 +1,70 @@
 
 import express from 'express';
 import cors from 'cors';
-import serverless from 'serverless-http';
+import morgan from 'morgan';
 import helmet from 'helmet';
 import compression from 'compression';
-import morgan from 'morgan';
-import swaggerJSDoc from 'swagger-jsdoc';
+import serverless from 'serverless-http';
+import swaggerJsDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import fs from 'fs-extra';
-import path from 'path';
-import os from 'os';
-import { fileURLToPath } from 'url';
-
-// Fix for __dirname in ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Import routes - fixed to use CommonJS require style export
 import mediaRoutes from './routes/mediaRoutes.js';
+import textRoutes from './routes/textRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 
-// Create Express app
+// Initialize express app
 const app = express();
+const port = process.env.PORT || 3000;
 
 // Middleware
+app.use(cors());
+app.use(morgan('dev'));
 app.use(helmet());
 app.use(compression());
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(morgan('dev'));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Swagger configuration
 const swaggerOptions = {
-  definition: {
+  swaggerDefinition: {
     openapi: '3.0.0',
     info: {
       title: 'Collaborators World API',
       version: '1.0.0',
-      description: 'APIs for media generation and transformation'
+      description: 'API for media generation and manipulation',
     },
     servers: [
       {
-        url: process.env.BASE_URL || 'http://localhost:3000'
-      }
-    ]
+        url: process.env.BASE_URL || 'http://localhost:3000',
+        description: 'Development server',
+      },
+    ],
   },
-  apis: ['./src/routes/*.js']
+  apis: ['./src/routes/*.js'],
 };
 
-const swaggerSpec = swaggerJSDoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-// Add API routes
-app.use('/api/media', mediaRoutes);
+// API Routes
+app.use('/media', mediaRoutes);
+app.use('/text', textRoutes);
+app.use('/ai', aiRoutes);
 
-// Health check route
-app.get('/health', (req, res) => {
-  res.json({ status: 'healthy' });
-});
-
-// Root route that redirects to API docs
+// Root route
 app.get('/', (req, res) => {
-  res.redirect('/api-docs');
+  res.json({
+    message: 'Welcome to Collaborators World API',
+    documentation: '/api-docs',
+  });
 });
 
-// Server export for serverless environments
-export const handler = serverless(app);
-
-// For local development
-if (process.env.NODE_ENV !== 'production') {
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`API documentation available at http://localhost:${PORT}/api-docs`);
+// Start server
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
   });
 }
+
+// Export for serverless use
+export const handler = serverless(app);
+export default app;
