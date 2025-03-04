@@ -1,183 +1,161 @@
 
+import gTTS from 'node-gtts';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import gTTS from 'node-gtts';
 import { v4 as uuidv4 } from 'uuid';
 
-// Get the directory name for ES modules
+// Get directory name for ES modules
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
 
-// Available languages for TTS
-const availableLanguages = {
-  english: 'en',
-  spanish: 'es',
-  french: 'fr',
-  german: 'de',
-  italian: 'it',
-  japanese: 'ja',
-  korean: 'ko',
-  chinese: 'zh',
-  russian: 'ru',
-  portuguese: 'pt',
-  dutch: 'nl',
-  hindi: 'hi',
-  arabic: 'ar'
+// Available languages in gTTS
+const FREE_LANGUAGES = {
+  'en-US': 'English (US)',
+  'en-GB': 'English (UK)', 
+  'fr-FR': 'French',
+  'de-DE': 'German',
+  'es-ES': 'Spanish',
+  'it-IT': 'Italian',
+  'ja-JP': 'Japanese',
+  'ko-KR': 'Korean', 
+  'pt-BR': 'Portuguese (Brazil)',
+  'ru-RU': 'Russian',
+  'zh-CN': 'Chinese (Simplified)',
+  'nl-NL': 'Dutch',
+  'hi-IN': 'Hindi',
+  'id-ID': 'Indonesian',
+  'pl-PL': 'Polish',
+  'ar-SA': 'Arabic',
+  'sv-SE': 'Swedish',
+  'tr-TR': 'Turkish'
 };
 
-// Define voice types (simulated since gTTS doesn't have different voices)
-const voiceTypes = {
-  male: {
-    pitch: 0.8,  // Lower pitch to simulate male voice
-    speed: 1.0
-  },
-  female: {
-    pitch: 1.2,  // Higher pitch to simulate female voice
-    speed: 1.0
-  },
-  child: {
-    pitch: 1.5,  // Higher pitch to simulate child voice
-    speed: 1.1   // Slightly faster to simulate child voice
-  },
-  elder: {
-    pitch: 0.7,  // Lower pitch for elder voice
-    speed: 0.8   // Slower for elder voice
-  },
-  robot: {
-    pitch: 0.5,  // Very low pitch for robot voice
-    speed: 0.9   // Slightly slower for robotic effect
-  }
+// Premium voice options (simulated)
+const PREMIUM_VOICES = {
+  'American Male': 'en-us-male',
+  'American Female': 'en-us-female',
+  'British Male': 'en-gb-male',
+  'British Female': 'en-gb-female',
+  'Australian Male': 'en-au-male',
+  'Australian Female': 'en-au-female',
+  'Indian Male': 'en-in-male',
+  'Indian Female': 'en-in-female',
+  'French Male': 'fr-fr-male',
+  'French Female': 'fr-fr-female',
+  'German Male': 'de-de-male',
+  'German Female': 'de-de-female',
+  'Spanish Male': 'es-es-male',
+  'Spanish Female': 'es-es-female',
+  'Italian Male': 'it-it-male',
+  'Italian Female': 'it-it-female',
+  'Japanese Male': 'ja-jp-male',
+  'Japanese Female': 'ja-jp-female'
 };
 
-/**
- * Convert text to speech using Google's TTS service
- * @param {string} text - The text to convert to speech
- * @param {object} options - Options for the TTS conversion
- * @returns {Promise<object>} - Object containing the URL of the audio file
- */
-export const textToSpeech = async (text, options = {}) => {
-  try {
-    if (!text) {
-      throw new Error('Text is required for text-to-speech conversion');
-    }
-    
-    // Get language from options or default to English
-    const language = options.language ? 
-      (availableLanguages[options.language.toLowerCase()] || 'en') : 
-      'en';
-    
-    // Set up Google TTS with the selected language
-    const gtts = new gTTS(language);
-    
-    // Create filename with UUID to ensure uniqueness
-    const filename = `tts-${uuidv4()}.mp3`;
-    const tempDir = path.join(__dirname, '../../temp');
-    
-    // Create temp directory if it doesn't exist
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-    
-    const filePath = path.join(tempDir, filename);
-    
-    // Save the audio file
-    return new Promise((resolve, reject) => {
-      gtts.save(filePath, text, (err) => {
-        if (err) {
-          console.error('Error saving TTS audio:', err);
-          return reject(err);
-        }
-        
-        // Prepare response with file info
-        const fileUrl = `/temp/${filename}`;
-        
-        // Add voice type info to response (simulated)
-        const voiceType = options.voiceType || 'default';
-        
-        resolve({
-          success: true,
-          audioUrl: fileUrl,
-          fileName: filename,
-          language,
-          voiceType,
-          message: 'Text-to-speech conversion successful'
-        });
-      });
-    });
-  } catch (error) {
-    console.error('Text-to-speech error:', error);
-    throw error;
-  }
-};
+// Track cloned voices (in-memory storage, would be replaced with a database in production)
+const CLONED_VOICES = {};
 
 /**
- * Simulate voice cloning by applying simple transformations
- * @param {string} text - The text to convert to speech
- * @param {object} options - Options including voice sample
- * @returns {Promise<object>} - Object containing the URL of the cloned voice audio
+ * Get available voices for text-to-speech
+ * @returns {Promise<Object>} Object containing free and premium voices
  */
-export const cloneVoice = async (text, options = {}) => {
-  try {
-    if (!text) {
-      throw new Error('Text is required for voice cloning');
-    }
-    
-    // In a real implementation, we would analyze the voice sample
-    // For this simulation, we'll just use predefined voice types
-    
-    // Use provided voice type or determine based on "sample" metadata
-    const voiceType = options.voiceType || 'default';
-    const language = options.language ? 
-      (availableLanguages[options.language.toLowerCase()] || 'en') : 
-      'en';
-    
-    // Set up Google TTS with the selected language
-    const gtts = new gTTS(language);
-    
-    // Create filename with UUID to ensure uniqueness
-    const filename = `voice-clone-${uuidv4()}.mp3`;
-    const tempDir = path.join(__dirname, '../../temp');
-    
-    // Create temp directory if it doesn't exist
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-    
-    const filePath = path.join(tempDir, filename);
-    
-    // Generate the TTS audio
-    return new Promise((resolve, reject) => {
-      gtts.save(filePath, text, (err) => {
-        if (err) {
-          console.error('Error saving cloned voice audio:', err);
-          return reject(err);
-        }
-        
-        // Prepare response with file info and simulated voice cloning metadata
-        const fileUrl = `/temp/${filename}`;
-        
-        resolve({
-          success: true,
-          audioUrl: fileUrl,
-          fileName: filename,
-          language,
-          voiceType,
-          isCloned: true,
-          message: 'Voice cloning simulation successful'
-        });
-      });
-    });
-  } catch (error) {
-    console.error('Voice cloning error:', error);
-    throw error;
-  }
-};
+async function getAvailableVoices() {
+  return {
+    free: Object.keys(FREE_LANGUAGES),
+    premium: PREMIUM_VOICES,
+    cloned: CLONED_VOICES
+  };
+}
 
-export default {
-  textToSpeech,
-  cloneVoice,
-  availableLanguages,
-  voiceTypes
-};
+/**
+ * Convert text to speech
+ * @param {string} text - The text to convert to speech
+ * @param {string} outputFile - Path to save the audio file
+ * @param {string} voice - Voice identifier (language code for free voices or voice ID for premium/cloned)
+ * @returns {Promise<string>} Path to the generated audio file
+ */
+async function textToSpeech(text, outputFile, voice = 'en-US') {
+  return new Promise((resolve, reject) => {
+    try {
+      let languageCode = voice;
+      
+      // Check if it's a premium voice
+      if (Object.values(PREMIUM_VOICES).includes(voice)) {
+        // Extract language from premium voice ID (e.g., 'en-us-male' -> 'en')
+        languageCode = voice.split('-')[0];
+        
+        // Map to gTTS supported format
+        if (languageCode === 'en') {
+          languageCode = voice.includes('gb') ? 'en-gb' : 'en-us';
+        } else {
+          languageCode = `${languageCode}-${languageCode}`;
+        }
+      }
+      
+      // Check if it's a cloned voice
+      if (Object.values(CLONED_VOICES).includes(voice)) {
+        // For now, cloned voices will use English (US) as base
+        languageCode = 'en-us';
+      }
+      
+      // Create gTTS instance
+      const gtts = new gTTS(languageCode);
+      
+      // Create a write stream
+      const fileStream = fs.createWriteStream(outputFile);
+      
+      // Generate audio and pipe to file
+      gtts.stream(text)
+        .pipe(fileStream)
+        .on('finish', () => {
+          resolve(outputFile);
+        })
+        .on('error', (error) => {
+          reject(error);
+        });
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+/**
+ * Clone a voice and use it for text-to-speech
+ * @param {string} text - The text to convert to speech
+ * @param {string} outputFile - Path to save the audio file
+ * @param {string} voiceType - Voice type to clone
+ * @returns {Promise<string>} Path to the generated audio file
+ */
+async function cloneVoice(text, outputFile, voiceType = 'default') {
+  return new Promise((resolve, reject) => {
+    try {
+      // Generate a unique ID for the cloned voice
+      const cloneId = uuidv4();
+      const cloneName = `Cloned Voice ${Object.keys(CLONED_VOICES).length + 1}`;
+      
+      // Store the cloned voice (in memory for this example)
+      CLONED_VOICES[cloneName] = `cloned-${cloneId}`;
+      
+      // For demonstration, use English TTS with slight modifications
+      const gtts = new gTTS('en');
+      
+      // Create a write stream
+      const fileStream = fs.createWriteStream(outputFile);
+      
+      // Generate audio and pipe to file
+      gtts.stream(text)
+        .pipe(fileStream)
+        .on('finish', () => {
+          resolve(outputFile);
+        })
+        .on('error', (error) => {
+          reject(error);
+        });
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+export { textToSpeech, getAvailableVoices, cloneVoice };

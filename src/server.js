@@ -1,85 +1,82 @@
 
 import express from 'express';
 import cors from 'cors';
-import morgan from 'morgan';
-import helmet from 'helmet';
 import compression from 'compression';
-import serverless from 'serverless-http';
-import swaggerJsDoc from 'swagger-jsdoc';
-import swaggerUi from 'swagger-ui-express';
+import helmet from 'helmet';
+import { rateLimit } from 'express-rate-limit';
+import morgan from 'morgan';
+import path from 'path';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import mediaRoutes from './routes/mediaRoutes.js';
+import serverless from 'serverless-http';
+
+// Import routes
+import mediaRouter from './routes/mediaRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 import textRoutes from './routes/textRoutes.js';
-import { aiRouter } from './routes/aiRoutes.js';
 
-// Get the directory name
+// Get the directory name for ES modules
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
 
-// Initialize express app
+// Create Express app
 const app = express();
-const port = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(morgan('dev'));
-app.use(helmet());
 app.use(compression());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(helmet({
+  contentSecurityPolicy: false // Disable CSP for simplicity in dev
+}));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(morgan('combined'));
 
-// Create temp directory for file storage
-app.use('/temp', express.static(join(__dirname, '../temp')));
+// Rate limiting
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60, // limit each IP to 60 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many requests from this IP, please try again after a minute'
+});
 
-// Swagger configuration
-const swaggerOptions = {
-  swaggerDefinition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'Collaborators World API',
-      version: '1.0.0',
-      description: 'API for media generation and manipulation',
-    },
-    servers: [
-      {
-        url: process.env.BASE_URL || 'http://localhost:3000',
-        description: 'Development server',
-      },
-    ],
-  },
-  apis: ['./src/routes/*.js'],
-};
+// Apply rate limiting to API routes
+app.use('/api', apiLimiter);
 
-const swaggerDocs = swaggerJsDoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+// Static directory for temporary files
+app.use('/temp', express.static(path.join(process.cwd(), 'temp')));
 
-// API Routes
-app.use('/media', mediaRoutes);
-app.use('/text', textRoutes);
-app.use('/ai', aiRouter);
+// API routes
+app.use('/', mediaRouter);
+app.use('/', aiRoutes);
+app.use('/', textRoutes);
 
-// Root route
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Welcome to Collaborators World API',
-    documentation: '/api-docs',
-    endpoints: {
-      media: '/media',
-      text: '/text',
-      ai: '/ai'
-    }
+// Swagger documentation endpoint
+app.get('/api-docs', (req, res) => {
+  res.send('API Documentation');
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', environment: process.env.NODE_ENV });
+});
+
+// Default error handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    error: 'Server error',
+    message: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message
   });
 });
 
-// Start server
-if (process.env.NODE_ENV !== 'test') {
-  app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-    console.log(`API documentation available at http://localhost:${port}/api-docs`);
+// Start server if not running in serverless environment
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
   });
 }
 
-// Export for serverless use
+// Export for serverless deployment
 export const handler = serverless(app);
-export default app;
