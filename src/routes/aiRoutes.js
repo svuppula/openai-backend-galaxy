@@ -3,9 +3,8 @@ import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import {
-  analyzeText,
-  generateScript,
-  generateText
+  summarizeText,
+  generateScript
 } from '../services/aiService.js';
 
 // Get __dirname equivalent for ES modules
@@ -48,10 +47,10 @@ router.post('/analyze', async (req, res) => {
       return res.status(400).json({ error: 'Text is required' });
     }
     
-    // Analyze text with AI
-    const analysis = await analyzeText(text);
+    // Use summarizeText for analysis since analyzeText doesn't exist
+    const analysis = await summarizeText(text);
     
-    res.json(analysis);
+    res.json({ analysis });
   } catch (error) {
     console.error('Error analyzing text:', error);
     res.status(500).json({ error: 'Failed to analyze text' });
@@ -139,8 +138,8 @@ router.post('/text-generation', async (req, res) => {
       return res.status(400).json({ error: 'Prompt is required' });
     }
     
-    // Generate text with AI
-    const text = await generateText(prompt, maxLength);
+    // We'll use generateScript for now as a text generation function
+    const text = await generateScript(prompt);
     
     res.json({ text });
   } catch (error) {

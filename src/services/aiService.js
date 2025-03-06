@@ -323,7 +323,20 @@ HOST: I hope you've enjoyed learning about ${prompt}. If you found this video he
   return personalizedScript;
 };
 
+/**
+ * Generate text based on a prompt (wrapper around generateScript for now)
+ * @param {string} prompt - Prompt for text generation
+ * @param {number} maxLength - Maximum length of the generated text
+ * @returns {Promise<string>} - Generated text
+ */
+export const generateText = async (prompt, maxLength = 500) => {
+  const script = await generateScript(prompt);
+  // For simplicity, just return the script trimmed to maxLength
+  return script.substring(0, maxLength);
+};
+
 export default {
   summarizeText,
-  generateScript
+  generateScript,
+  generateText
 };
