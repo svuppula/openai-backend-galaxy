@@ -52,9 +52,7 @@ const swaggerOptions = {
     info: {
       title: 'Collaborators World API',
       version: '1.0.0',
-      description: 'API for text generation, summar
-
-ization, text-to-speech, and media generation'
+      description: 'API for text generation, summarization, text-to-speech, and media generation'
     },
     servers: [
       {
@@ -84,5 +82,9 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+// For AWS Lambda handler with serverless-http
+import serverless from 'serverless-http';
+export const handler = serverless(app);
 
 export default app;
