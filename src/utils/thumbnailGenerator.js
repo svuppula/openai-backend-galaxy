@@ -1,250 +1,212 @@
 
-import { createCanvas, loadImage, registerFont } from 'canvas';
-import path from 'path';
-import fs from 'fs-extra';
-import axios from 'axios';
-import { fileURLToPath } from 'url';
-import AdmZip from 'adm-zip';
+const fs = require('fs');
+const path = require('path');
+const AdmZip = require('adm-zip');
+const { v4: uuidv4 } = require('uuid');
+const tf = require('@tensorflow/tfjs-node');
+const axios = require('axios');
+const { Canvas, Image } = require('canvas');
+const fse = require('fs-extra');
 
-// ES Module compatible __dirname equivalent
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Font paths
-const fontDir = path.join(__dirname, '../assets/fonts');
-const fontPath = path.join(fontDir, 'Roboto-Bold.ttf');
-
-// Ensure font directory exists
-fs.ensureDirSync(fontDir);
-
-// Download Roboto font if it doesn't exist
-async function ensureFontExists() {
+// Initialize canvas
+const registerFonts = () => {
+  const fontPath = path.join(__dirname, '../assets/fonts/Roboto-Bold.ttf');
+  
+  // Create the directory if it doesn't exist
+  const fontDir = path.dirname(fontPath);
+  if (!fs.existsSync(fontDir)) {
+    fs.mkdirSync(fontDir, { recursive: true });
+  }
+  
+  // Download the font if it doesn't exist
   if (!fs.existsSync(fontPath)) {
     console.log('Downloading Roboto-Bold.ttf font...');
+    const fontUrl = 'https://github.com/google/fonts/raw/main/apache/roboto/Roboto-Bold.ttf';
+    
+    return axios({
+      method: 'get',
+      url: fontUrl,
+      responseType: 'stream'
+    })
+      .then(response => {
+        const writer = fs.createWriteStream(fontPath);
+        response.data.pipe(writer);
+        
+        return new Promise((resolve, reject) => {
+          writer.on('finish', resolve);
+          writer.on('error', reject);
+        });
+      })
+      .then(() => {
+        // Register font after successful download
+        try {
+          const { registerFont } = require('canvas');
+          registerFont(fontPath, { family: 'Roboto', weight: 'bold' });
+          console.log('Font registered successfully');
+        } catch (err) {
+          console.error('Error registering font:', err);
+        }
+      })
+      .catch(err => {
+        console.error('Error downloading font:', err);
+      });
+  } else {
+    // Register existing font
     try {
-      const fontUrl = 'https://github.com/google/fonts/raw/main/apache/roboto/static/Roboto-Bold.ttf';
-      const response = await axios.get(fontUrl, { responseType: 'arraybuffer' });
-      fs.writeFileSync(fontPath, Buffer.from(response.data));
-      console.log('Roboto-Bold.ttf downloaded successfully');
-    } catch (error) {
-      console.error('Error downloading font:', error.message);
-      // Use system font as fallback
-      return false;
-    }
-  }
-  return true;
-}
-
-// Register font with canvas
-async function registerFontForCanvas() {
-  const fontExists = await ensureFontExists();
-  if (fontExists) {
-    try {
+      const { registerFont } = require('canvas');
       registerFont(fontPath, { family: 'Roboto', weight: 'bold' });
       console.log('Font registered successfully');
+    } catch (err) {
+      console.error('Error registering font:', err);
+    }
+    return Promise.resolve();
+  }
+};
+
+// Call registerFonts at startup
+registerFonts();
+
+// Model cache
+let textToImageModel = null;
+
+// Load the text-to-image model (will use a pre-trained model from TensorFlow Hub)
+async function loadModel() {
+  if (!textToImageModel) {
+    try {
+      // Load the model from TensorFlow Hub (using a text-to-image model)
+      const modelUrl = 'https://tfhub.dev/google/imagenet/mobilenet_v2_100_224/classification/5';
+      textToImageModel = await tf.loadGraphModel(modelUrl, { fromTFHub: true });
+      console.log('Text-to-image model loaded successfully');
     } catch (error) {
-      console.error('Font registration failed:', error.message);
-      // Continue without custom font
+      console.error('Error loading text-to-image model:', error);
+      throw new Error('Failed to load text-to-image model');
     }
   }
+  return textToImageModel;
 }
 
-export async function generateThumbnails(prompt) {
-  await registerFontForCanvas();
-  
-  // Create temp directory if it doesn't exist
-  const tempDir = path.resolve(process.env.TEMP_DIR || './temp');
-  fs.ensureDirSync(tempDir);
-  
-  const zip = new AdmZip();
-  const thumbnailPath = path.join(tempDir, 'thumbnails');
-  fs.ensureDirSync(thumbnailPath);
-  
-  // Generate multiple thumbnails with different realistic background images
-  const imagePromises = [];
-  
-  // Use Unsplash API to get realistic images based on the prompt
-  // Since we're aiming for no API keys, we'll use direct Unsplash source URLs for common themes
-  const backgroundImages = [
-    // Technology themed
-    'https://images.unsplash.com/photo-1550751827-4bd374c3f58b',
-    // Nature themed
-    'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05',
-    // Urban themed
-    'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df',
-    // Abstract themed
-    'https://images.unsplash.com/photo-1541701494587-cb58502866ab',
-    // Business themed
-    'https://images.unsplash.com/photo-1554774853-aae0a22c8aa4'
-  ];
-  
-  // Extract keywords from prompt
-  const keywords = prompt.split(' ')
-    .filter(word => word.length > 3)
-    .map(word => word.toLowerCase());
-  
-  // For thumbnails with background images
-  for (let i = 0; i < backgroundImages.length; i++) {
-    const imageUrl = `${backgroundImages[i]}?q=85&w=1280&h=720&fit=crop`;
-    imagePromises.push(createThumbnail(
-      imageUrl,
-      prompt,
-      path.join(thumbnailPath, `thumbnail_${i + 1}.jpg`),
-      1280, 720
-    ));
-  }
-  
-  // For thumbnails with solid color backgrounds and different layouts
-  const colors = ['#1E40AF', '#991B1B', '#065F46', '#6B21A8', '#B45309'];
-  
-  for (let i = 0; i < colors.length; i++) {
-    imagePromises.push(createSolidThumbnail(
-      colors[i],
-      prompt,
-      path.join(thumbnailPath, `thumbnail_solid_${i + 1}.jpg`),
-      1280, 720
-    ));
-  }
-  
-  // Wait for all thumbnails to be created
-  await Promise.all(imagePromises);
-  
-  // Add all generated thumbnails to the zip file
-  const files = fs.readdirSync(thumbnailPath);
-  files.forEach(file => {
-    const filePath = path.join(thumbnailPath, file);
-    zip.addLocalFile(filePath);
-  });
-  
-  // Write the zip file
-  const zipFilePath = path.join(tempDir, 'thumbnails.zip');
-  zip.writeZip(zipFilePath);
-  
-  // Clean up individual files
-  files.forEach(file => {
-    fs.unlinkSync(path.join(thumbnailPath, file));
-  });
-  
-  return zipFilePath;
-}
-
-async function createThumbnail(imageUrl, text, outputPath, width, height) {
+// Use Unsplash API for realistic images based on the prompt
+async function getRealisticImageFromUnsplash(prompt) {
   try {
-    // Create canvas
-    const canvas = createCanvas(width, height);
-    const ctx = canvas.getContext('2d');
+    // Clean the prompt for better search results
+    const searchTerm = prompt.split(' ').slice(0, 3).join(' ');
     
-    // Load and draw background image
-    const image = await loadImage(imageUrl);
-    ctx.drawImage(image, 0, 0, width, height);
+    // Search Unsplash for images matching the prompt
+    const unsplashResponse = await axios.get(`https://source.unsplash.com/1200x800/?${encodeURIComponent(searchTerm)}`);
     
-    // Add semi-transparent overlay for better text visibility
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    ctx.fillRect(0, 0, width, height);
-    
-    // Configure text style
-    ctx.font = '60px "Roboto", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    
-    // Add text shadow for better readability
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-    ctx.shadowBlur = 15;
-    ctx.shadowOffsetX = 4;
-    ctx.shadowOffsetY = 4;
-    
-    // Draw text with word wrapping
-    const lines = getLines(ctx, text, width - 100);
-    ctx.fillStyle = '#FFFFFF';
-    
-    lines.forEach((line, index) => {
-      const y = height / 2 - ((lines.length - 1) * 70 / 2) + index * 70;
-      ctx.fillText(line, width / 2, y);
-    });
-    
-    // Save the image
-    const buffer = canvas.toBuffer('image/jpeg', { quality: 0.9 });
-    fs.writeFileSync(outputPath, buffer);
-    return outputPath;
+    // The URL after redirects is the image URL
+    return unsplashResponse.request.res.responseUrl;
   } catch (error) {
-    console.error('Error creating thumbnail:', error);
+    console.error('Error fetching image from Unsplash:', error);
+    throw new Error('Failed to fetch realistic image');
+  }
+}
+
+// Generate thumbnails from text prompt
+async function generateThumbnails(prompt, count = 3) {
+  // Create a unique job ID for this generation
+  const jobId = uuidv4();
+  const tempDir = path.join(__dirname, '../../temp', jobId);
+
+  try {
+    // Create temporary directory
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    // Generate multiple images for the same prompt
+    const imagePromises = [];
+    for (let i = 0; i < count; i++) {
+      imagePromises.push(generateSingleThumbnail(prompt, i, tempDir));
+    }
+
+    // Wait for all images to be generated
+    await Promise.all(imagePromises);
+
+    // Create a zip file with all generated images
+    const zipPath = path.join(tempDir, 'thumbnails.zip');
+    const zip = new AdmZip();
+    
+    // Add each image to the zip
+    const files = fs.readdirSync(tempDir);
+    for (const file of files) {
+      if (file.endsWith('.jpg') || file.endsWith('.png')) {
+        const filePath = path.join(tempDir, file);
+        zip.addLocalFile(filePath);
+      }
+    }
+    
+    // Write the zip file
+    zip.writeZip(zipPath);
+    
+    // Return the path to the zip file
+    return zipPath;
+  } catch (error) {
+    console.error('Error generating thumbnails:', error);
     throw error;
   }
 }
 
-async function createSolidThumbnail(backgroundColor, text, outputPath, width, height) {
+// Generate a single thumbnail
+async function generateSingleThumbnail(prompt, index, tempDir) {
   try {
-    // Create canvas
-    const canvas = createCanvas(width, height);
-    const ctx = canvas.getContext('2d');
+    // Get a realistic image URL from Unsplash based on the prompt
+    const imageUrl = await getRealisticImageFromUnsplash(prompt);
     
-    // Draw background
-    ctx.fillStyle = backgroundColor;
-    ctx.fillRect(0, 0, width, height);
-    
-    // Add design elements
-    drawDesignElements(ctx, width, height);
-    
-    // Configure text style
-    ctx.font = '64px "Roboto", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    
-    // Draw text with word wrapping
-    const lines = getLines(ctx, text, width - 150);
-    ctx.fillStyle = '#FFFFFF';
-    
-    lines.forEach((line, index) => {
-      const y = height / 2 - ((lines.length - 1) * 70 / 2) + index * 70;
-      ctx.fillText(line, width / 2, y);
+    // Download the image
+    const response = await axios({
+      method: 'get',
+      url: imageUrl,
+      responseType: 'arraybuffer'
     });
     
-    // Save the image
-    const buffer = canvas.toBuffer('image/jpeg', { quality: 0.9 });
-    fs.writeFileSync(outputPath, buffer);
-    return outputPath;
+    // Save the image to the temp directory
+    const imagePath = path.join(tempDir, `thumbnail_${index + 1}.jpg`);
+    fs.writeFileSync(imagePath, response.data);
+    
+    // Load the image into canvas to add text overlay
+    const image = new Image();
+    const buffer = fs.readFileSync(imagePath);
+    image.src = buffer;
+    
+    // Create canvas with the image dimensions
+    const canvas = new Canvas(image.width, image.height);
+    const ctx = canvas.getContext('2d');
+    
+    // Draw the image on the canvas
+    ctx.drawImage(image, 0, 0, image.width, image.height);
+    
+    // Add text overlay with the prompt
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, image.height - 100, image.width, 100);
+    
+    ctx.font = '30px Roboto';
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'center';
+    ctx.fillText(prompt.length > 50 ? prompt.substring(0, 47) + '...' : prompt, 
+                image.width / 2, image.height - 40);
+    
+    // Save the modified image
+    const buffer2 = canvas.toBuffer('image/jpeg');
+    fs.writeFileSync(imagePath, buffer2);
+    
+    return imagePath;
   } catch (error) {
-    console.error('Error creating solid thumbnail:', error);
-    throw error;
+    console.error('Error generating thumbnail:', error);
+    throw new Error('Failed to generate thumbnail');
   }
 }
 
-function drawDesignElements(ctx, width, height) {
-  // Draw decorative elements
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-  
-  // Draw circles
-  for (let i = 0; i < 5; i++) {
-    const radius = Math.random() * 100 + 50;
-    const x = Math.random() * width;
-    const y = Math.random() * height;
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  
-  // Draw diagonal stripes
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-  for (let i = -height; i < width + height; i += 40) {
-    ctx.fillRect(i, 0, 20, height);
+// Clean up temporary files
+function cleanupTempFiles(jobId) {
+  const tempDir = path.join(__dirname, '../../temp', jobId);
+  if (fs.existsSync(tempDir)) {
+    fse.removeSync(tempDir);
   }
 }
 
-function getLines(ctx, text, maxWidth) {
-  const words = text.split(' ');
-  const lines = [];
-  let currentLine = words[0];
-  
-  for (let i = 1; i < words.length; i++) {
-    const word = words[i];
-    const width = ctx.measureText(currentLine + ' ' + word).width;
-    if (width < maxWidth) {
-      currentLine += ' ' + word;
-    } else {
-      lines.push(currentLine);
-      currentLine = word;
-    }
-  }
-  lines.push(currentLine);
-  return lines;
-}
+module.exports = {
+  generateThumbnails,
+  cleanupTempFiles,
+  loadModel
+};

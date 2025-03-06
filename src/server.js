@@ -2,170 +2,87 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import morgan from 'morgan';
 import compression from 'compression';
-import rateLimit from 'express-rate-limit';
-import swaggerJsDoc from 'swagger-jsdoc';
+import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
+import swaggerJsDoc from 'swagger-jsdoc';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import serverless from 'serverless-http';
-import fs from 'fs-extra';
+import rateLimit from 'express-rate-limit';
+import * as tf from '@tensorflow/tfjs-node';
 
-// Import routes
-import { router as mediaRoutes } from './routes/mediaRoutes.js';
-import { router as aiRoutes } from './routes/aiRoutes.js';
-import { router as textRoutes } from './routes/textRoutes.js';
+// Import routes - using require since some modules are CommonJS
+const aiRoutes = require('./routes/aiRoutes.js');
+const textRoutes = require('./routes/textRoutes.js');
+const mediaRoutes = require('./routes/mediaRoutes.js');
 
-// ES Module compatible __dirname
+// Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Setup express app
+// Initialize Express
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
 app.use(helmet({
-  contentSecurityPolicy: false, // Disabled to allow Swagger UI to work properly
-  crossOriginEmbedderPolicy: false
+  contentSecurityPolicy: false // Disable for Swagger UI
 }));
-app.use(morgan('combined'));
 app.use(compression());
+app.use(morgan('common'));
 app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Rate limiting
+// Rate limiting - 100 requests per minute
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // limit each IP to 1000 requests per windowMs
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 100, // 100 requests per window
   standardHeaders: true,
-  legacyHeaders: false,
-  message: 'Too many requests from this IP, please try again after 15 minutes'
+  message: { error: 'Too many requests, please try again later.' }
 });
 
-// Apply rate limiting to all routes
-app.use(apiLimiter);
-
-// Create temp directory if it doesn't exist
-const tempDir = process.env.TEMP_DIR || './temp';
-fs.ensureDirSync(tempDir);
+// Apply rate limiting to API routes
+app.use('/api', apiLimiter);
 
 // Swagger configuration
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Collaborators World API Documentation',
+      title: 'Collaborators World API',
       version: '1.0.0',
-      description: 'Documentation for the Collaborators World Media API',
-      contact: {
-        name: 'API Support',
-        email: 'support@collaboratorsworld.com'
-      }
+      description: 'API for text generation, summar
+
+ization, text-to-speech, and media generation'
     },
     servers: [
       {
-        url: process.env.BASE_URL || 'http://localhost:3000',
+        url: 'http://localhost:3000',
         description: 'Development server'
       }
-    ],
-    components: {
-      schemas: {
-        TextToSpeechRequest: {
-          type: 'object',
-          required: ['text', 'voice'],
-          properties: {
-            text: {
-              type: 'string',
-              description: 'The text to convert to speech'
-            },
-            voice: {
-              type: 'string',
-              description: 'The voice ID to use for text-to-speech'
-            }
-          }
-        },
-        ImageGenerationRequest: {
-          type: 'object',
-          required: ['prompt'],
-          properties: {
-            prompt: {
-              type: 'string',
-              description: 'The prompt to use for image generation'
-            }
-          }
-        },
-        VideoGenerationRequest: {
-          type: 'object',
-          required: ['prompt'],
-          properties: {
-            prompt: {
-              type: 'string',
-              description: 'The prompt to use for video generation'
-            }
-          }
-        },
-        AnimationGenerationRequest: {
-          type: 'object',
-          required: ['prompt'],
-          properties: {
-            prompt: {
-              type: 'string',
-              description: 'The prompt to use for animation generation'
-            }
-          }
-        },
-        VoiceCloneRequest: {
-          type: 'object',
-          required: ['name', 'audioUrl'],
-          properties: {
-            name: {
-              type: 'string',
-              description: 'The name to give to the cloned voice'
-            },
-            audioUrl: {
-              type: 'string',
-              description: 'URL to the audio file to clone'
-            }
-          }
-        }
-      }
-    }
+    ]
   },
-  apis: ['./src/routes/*.js'], // Path to the API routes
+  apis: ['./src/routes/*.js']
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-// API Routes
-app.use('/api/media', mediaRoutes);
+// Routes
 app.use('/api/ai', aiRoutes);
 app.use('/api/text', textRoutes);
+app.use('/api/media', mediaRoutes);
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'Server is running' });
-});
-
-// Error handling middleware
+// Global error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({
-    error: err.message || 'Internal Server Error',
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-  });
+  res.status(500).json({ error: 'Something went wrong!' });
 });
 
-// Start server (if not being run via serverless)
-if (!process.env.SERVERLESS) {
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
-}
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
-// Export for serverless
-export const handler = serverless(app);
 export default app;

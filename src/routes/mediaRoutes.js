@@ -1,85 +1,27 @@
 
-import express from 'express';
-import path from 'path';
-import fs from 'fs-extra';
-import { fileURLToPath } from 'url';
-import AdmZip from 'adm-zip';
-import { generateThumbnails } from '../utils/thumbnailGenerator.js';
-import { textToSpeech, getAvailableVoices } from '../services/ttsService.js';
+const express = require('express');
+const { v4: uuidv4 } = require('uuid');
+const path = require('path');
+const fs = require('fs');
+const { promisify } = require('util');
+const AdmZip = require('adm-zip');
+const { generateThumbnails, cleanupTempFiles, loadModel } = require('../utils/thumbnailGenerator');
+const { textToSpeech, getAvailableVoices, cloneVoice } = require('../services/ttsService');
 
-// ES Module compatible __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Create router
 const router = express.Router();
 
-/**
- * @swagger
- * /api/media/available-voices:
- *   get:
- *     summary: Get available voices for text-to-speech
- *     description: Returns a list of available voices for use with the text-to-speech API
- *     tags: [Media]
- *     responses:
- *       200:
- *         description: List of available voices
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 free:
- *                   type: array
- *                   items:
- *                     type: string
- *                 premium:
- *                   type: object
- *                   additionalProperties:
- *                     type: string
- *                 cloned:
- *                   type: object
- *                   additionalProperties:
- *                     type: string
- *       500:
- *         description: Server error
- */
+// GET available voices
 router.get('/available-voices', async (req, res) => {
   try {
     const voices = await getAvailableVoices();
     res.json(voices);
   } catch (error) {
     console.error('Error getting available voices:', error);
-    res.status(500).json({ error: error.message || 'Failed to get available voices' });
+    res.status(500).json({ error: 'Failed to get available voices' });
   }
 });
 
-/**
- * @swagger
- * /api/media/text-to-speech:
- *   post:
- *     summary: Convert text to speech
- *     description: Converts text to speech and returns the audio file
- *     tags: [Media]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/TextToSpeechRequest'
- *     responses:
- *       200:
- *         description: Audio file
- *         content:
- *           application/zip:
- *             schema:
- *               type: string
- *               format: binary
- *       400:
- *         description: Invalid request
- *       500:
- *         description: Server error
- */
+// Text to speech
 router.post('/text-to-speech', async (req, res) => {
   try {
     const { text, voice } = req.body;
@@ -88,62 +30,38 @@ router.post('/text-to-speech', async (req, res) => {
       return res.status(400).json({ error: 'Text is required' });
     }
     
-    // Set default voice if not provided
-    const selectedVoice = voice || 'en-US';
+    // Generate a unique session ID
+    const sessionId = uuidv4();
     
-    // Generate speech
-    const outputZipPath = await textToSpeech(text, selectedVoice);
+    // Convert text to speech
+    const outputPath = await textToSpeech(text, voice, sessionId);
     
-    // Set appropriate headers
+    // Create a zip file
+    const zip = new AdmZip();
+    
+    // Add the generated audio file to the zip
+    zip.addLocalFile(outputPath);
+    
+    // Set headers for the response
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename=speech.zip`);
+    res.setHeader('Content-Disposition', `attachment; filename="speech-${sessionId}.zip"`);
     
-    // Send file
-    res.sendFile(outputZipPath, { root: '/' }, (err) => {
-      if (err) {
-        console.error('Error sending file:', err);
-        if (!res.headersSent) {
-          res.status(500).json({ error: 'Error sending file' });
-        }
-      }
+    // Send the zip file
+    zip.toBuffer().then((buffer) => {
+      res.send(buffer);
       
-      // Delete file after sending (not waiting for deletion to complete)
-      fs.unlink(outputZipPath, (err) => {
-        if (err) console.error('Error deleting file:', err);
+      // Clean up temporary files
+      fs.unlink(outputPath, (err) => {
+        if (err) console.error('Error deleting audio file:', err);
       });
     });
   } catch (error) {
-    console.error('Text to speech error:', error);
-    res.status(500).json({ error: error.message || 'Text to speech failed' });
+    console.error('Error generating speech:', error);
+    res.status(500).json({ error: 'Failed to generate speech' });
   }
 });
 
-/**
- * @swagger
- * /api/media/generate-image:
- *   post:
- *     summary: Generate thumbnail images based on a prompt
- *     description: Generates multiple thumbnail images based on the provided prompt
- *     tags: [Media]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/ImageGenerationRequest'
- *     responses:
- *       200:
- *         description: Zip file containing generated images
- *         content:
- *           application/zip:
- *             schema:
- *               type: string
- *               format: binary
- *       400:
- *         description: Invalid request
- *       500:
- *         description: Server error
- */
+// Thumbnail generation
 router.post('/generate-image', async (req, res) => {
   try {
     const { prompt } = req.body;
@@ -152,59 +70,37 @@ router.post('/generate-image', async (req, res) => {
       return res.status(400).json({ error: 'Prompt is required' });
     }
     
+    // Load the model before generating images
+    await loadModel();
+    
     // Generate thumbnails
-    const outputZipPath = await generateThumbnails(prompt);
+    const zipPath = await generateThumbnails(prompt, 3);
     
-    // Set appropriate headers
+    // Check if the file exists
+    if (!fs.existsSync(zipPath)) {
+      return res.status(500).json({ error: 'Failed to generate thumbnails' });
+    }
+    
+    // Set the content type
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename=thumbnails.zip`);
+    res.setHeader('Content-Disposition', 'attachment; filename=thumbnails.zip');
     
-    // Send file
-    res.sendFile(outputZipPath, { root: '/' }, (err) => {
-      if (err) {
-        console.error('Error sending file:', err);
-        if (!res.headersSent) {
-          res.status(500).json({ error: 'Error sending file' });
-        }
-      }
-      
-      // Delete file after sending (not waiting for deletion to complete)
-      fs.unlink(outputZipPath, (err) => {
-        if (err) console.error('Error deleting file:', err);
-      });
+    // Send the file
+    const fileStream = fs.createReadStream(zipPath);
+    fileStream.pipe(res);
+    
+    // Clean up the temp directory after sending the file
+    fileStream.on('close', () => {
+      const jobId = path.basename(path.dirname(zipPath));
+      cleanupTempFiles(jobId);
     });
   } catch (error) {
-    console.error('Image generation error:', error);
-    res.status(500).json({ error: error.message || 'Image generation failed' });
+    console.error('Error generating thumbnails:', error);
+    res.status(500).json({ error: 'Failed to generate thumbnails' });
   }
 });
 
-/**
- * @swagger
- * /api/media/generate-video:
- *   post:
- *     summary: Generate video based on a prompt
- *     description: Generates a video based on the provided prompt
- *     tags: [Media]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/VideoGenerationRequest'
- *     responses:
- *       200:
- *         description: Zip file containing generated video
- *         content:
- *           application/zip:
- *             schema:
- *               type: string
- *               format: binary
- *       400:
- *         description: Invalid request
- *       500:
- *         description: Server error
- */
+// Video generation (placeholder)
 router.post('/generate-video', async (req, res) => {
   try {
     const { prompt } = req.body;
@@ -213,77 +109,46 @@ router.post('/generate-video', async (req, res) => {
       return res.status(400).json({ error: 'Prompt is required' });
     }
     
-    // Create a placeholder zip file with a README explaining that this is a simulation
+    // Mock video generation - creating a ZIP with a dummy video
+    const sessionId = uuidv4();
+    const tempDir = path.join(__dirname, '../../temp', sessionId);
+    
+    // Create temp directory
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    
+    // Create a text file with the prompt as placeholder
+    const videoInfoPath = path.join(tempDir, 'video_info.txt');
+    fs.writeFileSync(videoInfoPath, `Video will be generated for prompt: ${prompt}`);
+    
+    // Create a zip file
+    const zipPath = path.join(tempDir, 'video.zip');
     const zip = new AdmZip();
-    const tempDir = process.env.TEMP_DIR || './temp';
-    fs.ensureDirSync(tempDir);
+    zip.addLocalFile(videoInfoPath);
+    zip.writeZip(zipPath);
     
-    // Add a README file
-    zip.addFile('README.txt', Buffer.from(
-      `Video Generation Simulation\n\n` +
-      `Prompt: ${prompt}\n\n` +
-      `This is a simulated video generation response.\n` +
-      `In a real implementation, this would contain actual video clips based on your prompt.\n` +
-      `The real implementation would use open-source video generation models.\n`
-    ));
-    
-    // Add placeholder files
-    zip.addFile('video.txt', Buffer.from(`This would be a video file generated from: ${prompt}`));
-    
-    // Save the zip file
-    const zipFilePath = path.join(tempDir, 'video_output.zip');
-    zip.writeZip(zipFilePath);
-    
-    // Set appropriate headers
+    // Set headers
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename=video_output.zip`);
+    res.setHeader('Content-Disposition', `attachment; filename=video-${sessionId}.zip`);
     
-    // Send file
-    res.sendFile(zipFilePath, { root: '/' }, (err) => {
-      if (err) {
-        console.error('Error sending file:', err);
-        if (!res.headersSent) {
-          res.status(500).json({ error: 'Error sending file' });
-        }
+    // Send the zip file
+    const fileStream = fs.createReadStream(zipPath);
+    fileStream.pipe(res);
+    
+    // Clean up temp directory
+    fileStream.on('close', () => {
+      if (fs.existsSync(tempDir)) {
+        fs.rmSync(tempDir, { recursive: true, force: true });
       }
-      
-      // Delete file after sending (not waiting for deletion to complete)
-      fs.unlink(zipFilePath, (err) => {
-        if (err) console.error('Error deleting file:', err);
-      });
     });
   } catch (error) {
-    console.error('Video generation error:', error);
-    res.status(500).json({ error: error.message || 'Video generation failed' });
+    console.error('Error generating video:', error);
+    res.status(500).json({ error: 'Failed to generate video' });
   }
 });
 
-/**
- * @swagger
- * /api/media/generate-animation:
- *   post:
- *     summary: Generate animation based on a prompt
- *     description: Generates an animation based on the provided prompt
- *     tags: [Media]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/AnimationGenerationRequest'
- *     responses:
- *       200:
- *         description: Zip file containing generated animation
- *         content:
- *           application/zip:
- *             schema:
- *               type: string
- *               format: binary
- *       400:
- *         description: Invalid request
- *       500:
- *         description: Server error
- */
+// Animation generation (placeholder)
 router.post('/generate-animation', async (req, res) => {
   try {
     const { prompt } = req.body;
@@ -292,105 +157,62 @@ router.post('/generate-animation', async (req, res) => {
       return res.status(400).json({ error: 'Prompt is required' });
     }
     
-    // Create a placeholder zip file with a README explaining that this is a simulation
-    const zip = new AdmZip();
-    const tempDir = process.env.TEMP_DIR || './temp';
-    fs.ensureDirSync(tempDir);
+    // Mock animation generation - creating a ZIP with a dummy animation file
+    const sessionId = uuidv4();
+    const tempDir = path.join(__dirname, '../../temp', sessionId);
     
-    // Add a README file
-    zip.addFile('README.txt', Buffer.from(
-      `Animation Generation Simulation\n\n` +
-      `Prompt: ${prompt}\n\n` +
-      `This is a simulated animation generation response.\n` +
-      `In a real implementation, this would contain actual animation files based on your prompt.\n` +
-      `The real implementation would use open-source animation generation models.\n`
-    ));
-    
-    // Add placeholder files
-    zip.addFile('animation.txt', Buffer.from(`This would be an animation file generated from: ${prompt}`));
-    
-    // Save the zip file
-    const zipFilePath = path.join(tempDir, 'animation_output.zip');
-    zip.writeZip(zipFilePath);
-    
-    // Set appropriate headers
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename=animation_output.zip`);
-    
-    // Send file
-    res.sendFile(zipFilePath, { root: '/' }, (err) => {
-      if (err) {
-        console.error('Error sending file:', err);
-        if (!res.headersSent) {
-          res.status(500).json({ error: 'Error sending file' });
-        }
-      }
-      
-      // Delete file after sending (not waiting for deletion to complete)
-      fs.unlink(zipFilePath, (err) => {
-        if (err) console.error('Error deleting file:', err);
-      });
-    });
-  } catch (error) {
-    console.error('Animation generation error:', error);
-    res.status(500).json({ error: error.message || 'Animation generation failed' });
-  }
-});
-
-/**
- * @swagger
- * /api/media/clone-voice:
- *   post:
- *     summary: Clone a voice
- *     description: Clones a voice from an audio file
- *     tags: [Media]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/VoiceCloneRequest'
- *     responses:
- *       200:
- *         description: Voice cloned successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 voiceId:
- *                   type: string
- *       400:
- *         description: Invalid request
- *       500:
- *         description: Server error
- */
-router.post('/clone-voice', async (req, res) => {
-  try {
-    const { name, audioUrl } = req.body;
-    
-    if (!name || !audioUrl) {
-      return res.status(400).json({ error: 'Name and audio URL are required' });
+    // Create temp directory
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
     }
     
-    // In a real implementation, we would download the audio file and use a voice cloning model
-    // For this simulation, we'll just return a success response with a fake voice ID
+    // Create a text file with the prompt as placeholder
+    const animationInfoPath = path.join(tempDir, 'animation_info.txt');
+    fs.writeFileSync(animationInfoPath, `Animation will be generated for prompt: ${prompt}`);
     
-    // Create a unique voice ID based on the name
-    const voiceId = `cloned_${name.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`;
+    // Create a zip file
+    const zipPath = path.join(tempDir, 'animation.zip');
+    const zip = new AdmZip();
+    zip.addLocalFile(animationInfoPath);
+    zip.writeZip(zipPath);
     
-    // Simulate adding the voice to the available voices
-    res.json({
-      success: true,
-      voiceId: voiceId,
-      message: 'Voice cloned successfully (simulation)'
+    // Set headers
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename=animation-${sessionId}.zip`);
+    
+    // Send the zip file
+    const fileStream = fs.createReadStream(zipPath);
+    fileStream.pipe(res);
+    
+    // Clean up temp directory
+    fileStream.on('close', () => {
+      if (fs.existsSync(tempDir)) {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
     });
   } catch (error) {
-    console.error('Voice cloning error:', error);
-    res.status(500).json({ error: error.message || 'Voice cloning failed' });
+    console.error('Error generating animation:', error);
+    res.status(500).json({ error: 'Failed to generate animation' });
   }
 });
 
-export { router };
+// Voice cloning
+router.post('/clone-voice', async (req, res) => {
+  try {
+    const { name, audioSample } = req.body;
+    
+    if (!name || !audioSample) {
+      return res.status(400).json({ error: 'Name and audio sample are required' });
+    }
+    
+    // Clone the voice
+    const result = await cloneVoice(name, audioSample);
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Error cloning voice:', error);
+    res.status(500).json({ error: 'Failed to clone voice' });
+  }
+});
+
+module.exports = router;
