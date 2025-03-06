@@ -1,12 +1,17 @@
 
-const express = require('express');
-const { v4: uuidv4 } = require('uuid');
-const path = require('path');
-const fs = require('fs');
-const { promisify } = require('util');
-const AdmZip = require('adm-zip');
-const { generateThumbnails, cleanupTempFiles, loadModel } = require('../utils/thumbnailGenerator');
-const { textToSpeech, getAvailableVoices, cloneVoice } = require('../services/ttsService');
+import express from 'express';
+import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
+import fs from 'fs';
+import { promisify } from 'util';
+import AdmZip from 'adm-zip';
+import { generateThumbnails, cleanupTempFiles, loadModel } from '../utils/thumbnailGenerator.js';
+import { textToSpeech, getAvailableVoices, cloneVoice } from '../services/ttsService.js';
+import { fileURLToPath } from 'url';
+
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
@@ -47,13 +52,12 @@ router.post('/text-to-speech', async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="speech-${sessionId}.zip"`);
     
     // Send the zip file
-    zip.toBuffer().then((buffer) => {
-      res.send(buffer);
-      
-      // Clean up temporary files
-      fs.unlink(outputPath, (err) => {
-        if (err) console.error('Error deleting audio file:', err);
-      });
+    const buffer = await zip.toBuffer();
+    res.send(buffer);
+    
+    // Clean up temporary files
+    fs.unlink(outputPath, (err) => {
+      if (err) console.error('Error deleting audio file:', err);
     });
   } catch (error) {
     console.error('Error generating speech:', error);
@@ -215,4 +219,4 @@ router.post('/clone-voice', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

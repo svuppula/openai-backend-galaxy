@@ -11,10 +11,10 @@ import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
 import * as tf from '@tensorflow/tfjs-node';
 
-// Import routes - using require since some modules are CommonJS
-const aiRoutes = require('./routes/aiRoutes.js');
-const textRoutes = require('./routes/textRoutes.js');
-const mediaRoutes = require('./routes/mediaRoutes.js');
+// Import routes using ES module syntax
+import aiRoutes from './routes/aiRoutes.js';
+import textRoutes from './routes/textRoutes.js';
+import mediaRoutes from './routes/mediaRoutes.js';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);

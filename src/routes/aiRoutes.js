@@ -10,7 +10,7 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-export const aiRouter = express.Router();
+const router = express.Router();
 
 /**
  * @swagger
@@ -46,7 +46,7 @@ export const aiRouter = express.Router();
  *       500:
  *         description: Server error
  */
-aiRouter.post('/analyze', async (req, res) => {
+router.post('/analyze', async (req, res) => {
   try {
     const { text } = req.body;
     
@@ -96,7 +96,7 @@ aiRouter.post('/analyze', async (req, res) => {
  *       500:
  *         description: Server error
  */
-aiRouter.post('/script-generation', async (req, res) => {
+router.post('/script-generation', async (req, res) => {
   try {
     const { prompt } = req.body;
     
@@ -142,7 +142,7 @@ aiRouter.post('/script-generation', async (req, res) => {
  *       500:
  *         description: Server error
  */
-aiRouter.post('/text-generation', async (req, res) => {
+router.post('/text-generation', async (req, res) => {
   try {
     const { prompt, maxLength = 500 } = req.body;
     
@@ -181,5 +181,4 @@ aiRouter.post('/text-generation', async (req, res) => {
   }
 });
 
-// Export the router for use in other files
-export default aiRouter;
+export default router;
