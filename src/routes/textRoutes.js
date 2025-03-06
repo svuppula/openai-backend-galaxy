@@ -1,19 +1,21 @@
 
 import express from 'express';
+import { v4 as uuidv4 } from 'uuid';
+import { analyzeText, generateSummary } from '../services/textService.js';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import path from 'path';
 
-// Get the directory name for ES modules
+// Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
 /**
  * @swagger
- * /text/analyze-sentiment:
+ * /api/text/analyze:
  *   post:
- *     summary: Analyze sentiment of text
+ *     summary: Analyze text for sentiment and entities
  *     tags: [Text]
  *     requestBody:
  *       required: true
@@ -26,16 +28,16 @@ const router = express.Router();
  *             properties:
  *               text:
  *                 type: string
- *                 description: Text to analyze
+ *                 example: "I love this product! It's amazing and the customer service is great."
  *     responses:
  *       200:
- *         description: Successfully analyzed sentiment
+ *         description: Analysis results
  *       400:
  *         description: Bad request
  *       500:
  *         description: Server error
  */
-router.post('/analyze-sentiment', async (req, res) => {
+router.post('/analyze', async (req, res) => {
   try {
     const { text } = req.body;
     
@@ -43,64 +45,19 @@ router.post('/analyze-sentiment', async (req, res) => {
       return res.status(400).json({ error: 'Text is required' });
     }
     
-    // Simple sentiment analysis based on positive and negative keywords
-    const positiveWords = [
-      'good', 'great', 'excellent', 'amazing', 'wonderful', 'fantastic',
-      'love', 'happy', 'joy', 'exciting', 'positive', 'beautiful',
-      'best', 'perfect', 'brilliant', 'outstanding'
-    ];
-    
-    const negativeWords = [
-      'bad', 'terrible', 'awful', 'horrible', 'poor', 'worst',
-      'hate', 'sad', 'disappointing', 'negative', 'ugly',
-      'failure', 'wrong', 'annoying', 'frustrating'
-    ];
-    
-    // Count occurrences of positive and negative words
-    const words = text.toLowerCase().split(/\W+/);
-    let positiveCount = 0;
-    let negativeCount = 0;
-    
-    words.forEach(word => {
-      if (positiveWords.includes(word)) positiveCount++;
-      if (negativeWords.includes(word)) negativeCount++;
-    });
-    
-    // Calculate sentiment score (-1 to 1)
-    const total = positiveCount + negativeCount;
-    let sentimentScore = 0;
-    
-    if (total > 0) {
-      sentimentScore = (positiveCount - negativeCount) / total;
-    }
-    
-    // Determine sentiment category
-    let sentiment;
-    if (sentimentScore > 0.5) sentiment = 'Very Positive';
-    else if (sentimentScore > 0.1) sentiment = 'Positive';
-    else if (sentimentScore > -0.1) sentiment = 'Neutral';
-    else if (sentimentScore > -0.5) sentiment = 'Negative';
-    else sentiment = 'Very Negative';
-    
-    res.json({
-      success: true,
-      text,
-      sentiment,
-      score: sentimentScore,
-      positiveWords: positiveCount,
-      negativeWords: negativeCount
-    });
+    const analysis = await analyzeText(text);
+    res.json(analysis);
   } catch (error) {
-    console.error('Sentiment analysis API error:', error.message);
-    res.status(500).json({ error: error.message || 'Sentiment analysis failed' });
+    console.error('Error analyzing text:', error);
+    res.status(500).json({ error: 'Failed to analyze text' });
   }
 });
 
 /**
  * @swagger
- * /text/summarize:
+ * /api/text/summarize:
  *   post:
- *     summary: Summarize text
+ *     summary: Generate a summary of provided text
  *     tags: [Text]
  *     requestBody:
  *       required: true
@@ -113,14 +70,13 @@ router.post('/analyze-sentiment', async (req, res) => {
  *             properties:
  *               text:
  *                 type: string
- *                 description: Text to summarize
- *               maxSentences:
+ *                 example: "Long article or text to summarize..."
+ *               maxLength:
  *                 type: number
- *                 description: Maximum number of sentences
- *                 default: 3
+ *                 example: 150
  *     responses:
  *       200:
- *         description: Successfully summarized text
+ *         description: Summary results
  *       400:
  *         description: Bad request
  *       500:
@@ -128,78 +84,17 @@ router.post('/analyze-sentiment', async (req, res) => {
  */
 router.post('/summarize', async (req, res) => {
   try {
-    const { text, maxSentences = 3 } = req.body;
+    const { text, maxLength = 150 } = req.body;
     
     if (!text) {
       return res.status(400).json({ error: 'Text is required' });
     }
     
-    // Basic text summarization algorithm
-    // 1. Split text into sentences
-    const sentences = text.match(/[^\.!\?]+[\.!\?]+/g) || [];
-    
-    if (sentences.length <= maxSentences) {
-      // Text is already short enough
-      return res.json({
-        success: true,
-        originalText: text,
-        summary: text,
-        originalLength: text.length,
-        summaryLength: text.length
-      });
-    }
-    
-    // 2. Calculate word frequency
-    const wordFrequency = {};
-    const words = text.toLowerCase().match(/\b\w+\b/g) || [];
-    
-    words.forEach(word => {
-      if (word.length > 2) { // Ignore short words
-        wordFrequency[word] = (wordFrequency[word] || 0) + 1;
-      }
-    });
-    
-    // 3. Score sentences based on word frequency
-    const sentenceScores = sentences.map(sentence => {
-      const sentenceWords = sentence.toLowerCase().match(/\b\w+\b/g) || [];
-      let score = 0;
-      
-      sentenceWords.forEach(word => {
-        if (wordFrequency[word]) {
-          score += wordFrequency[word];
-        }
-      });
-      
-      // Normalize by sentence length to avoid bias towards longer sentences
-      return {
-        sentence,
-        score: sentenceWords.length > 0 ? score / sentenceWords.length : 0
-      };
-    });
-    
-    // 4. Sort sentences by score and select top N
-    const topSentences = sentenceScores
-      .sort((a, b) => b.score - a.score)
-      .slice(0, maxSentences)
-      .sort((a, b) => {
-        // Restore original order
-        return sentences.indexOf(a.sentence) - sentences.indexOf(b.sentence);
-      })
-      .map(item => item.sentence);
-    
-    const summary = topSentences.join(' ');
-    
-    res.json({
-      success: true,
-      originalText: text,
-      summary,
-      originalLength: text.length,
-      summaryLength: summary.length,
-      compressionRatio: Math.round((1 - summary.length / text.length) * 100) + '%'
-    });
+    const summary = await generateSummary(text, maxLength);
+    res.json({ summary });
   } catch (error) {
-    console.error('Text summarization API error:', error.message);
-    res.status(500).json({ error: error.message || 'Text summarization failed' });
+    console.error('Error generating summary:', error);
+    res.status(500).json({ error: 'Failed to generate summary' });
   }
 });
 

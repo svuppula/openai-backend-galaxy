@@ -1,12 +1,14 @@
 
 import express from 'express';
-import { generateScript, summarizeText } from '../services/aiService.js';
-import fs from 'fs';
-import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import {
+  analyzeText,
+  generateScript,
+  generateText
+} from '../services/aiService.js';
 
-// Get the directory name
+// Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -14,10 +16,10 @@ const router = express.Router();
 
 /**
  * @swagger
- * /ai/analyze:
+ * /api/ai/analyze:
  *   post:
- *     summary: Analyze text content
- *     tags: [AI Services]
+ *     summary: Analyze text using AI
+ *     tags: [AI]
  *     requestBody:
  *       required: true
  *       content:
@@ -29,20 +31,12 @@ const router = express.Router();
  *             properties:
  *               text:
  *                 type: string
- *                 description: Text to analyze
+ *                 example: "Text to analyze for sentiment, tone, and key points."
  *     responses:
  *       200:
- *         description: Successfully analyzed text
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 analysis:
- *                   type: string
- *                   description: Analysis of the text
+ *         description: Analysis results
  *       400:
- *         description: Bad request, missing or invalid parameters
+ *         description: Bad request
  *       500:
  *         description: Server error
  */
@@ -54,20 +48,22 @@ router.post('/analyze', async (req, res) => {
       return res.status(400).json({ error: 'Text is required' });
     }
     
-    const analysis = await summarizeText(text);
-    res.json({ analysis });
+    // Analyze text with AI
+    const analysis = await analyzeText(text);
+    
+    res.json(analysis);
   } catch (error) {
-    console.error('Text analysis API error:', error.message);
-    res.status(500).json({ error: error.message || 'Text analysis failed' });
+    console.error('Error analyzing text:', error);
+    res.status(500).json({ error: 'Failed to analyze text' });
   }
 });
 
 /**
  * @swagger
- * /ai/script-generation:
+ * /api/ai/script-generation:
  *   post:
- *     summary: Generate a script from a prompt
- *     tags: [AI Services]
+ *     summary: Generate script based on prompt
+ *     tags: [AI]
  *     requestBody:
  *       required: true
  *       content:
@@ -79,20 +75,12 @@ router.post('/analyze', async (req, res) => {
  *             properties:
  *               prompt:
  *                 type: string
- *                 description: Creative prompt for script generation
+ *                 example: "Create a 1-minute explainer video script about quantum computing."
  *     responses:
  *       200:
- *         description: Successfully generated script
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 script:
- *                   type: string
- *                   description: Generated script
+ *         description: Generated script
  *       400:
- *         description: Bad request, missing or invalid parameters
+ *         description: Bad request
  *       500:
  *         description: Server error
  */
@@ -104,20 +92,22 @@ router.post('/script-generation', async (req, res) => {
       return res.status(400).json({ error: 'Prompt is required' });
     }
     
+    // Generate script with AI
     const script = await generateScript(prompt);
+    
     res.json({ script });
   } catch (error) {
-    console.error('Script generation API error:', error.message);
-    res.status(500).json({ error: error.message || 'Script generation failed' });
+    console.error('Error generating script:', error);
+    res.status(500).json({ error: 'Failed to generate script' });
   }
 });
 
 /**
  * @swagger
- * /ai/text-generation:
+ * /api/ai/text-generation:
  *   post:
- *     summary: Generate text using local AI model
- *     tags: [AI Services]
+ *     summary: Generate text based on prompt
+ *     tags: [AI]
  *     requestBody:
  *       required: true
  *       content:
@@ -129,14 +119,13 @@ router.post('/script-generation', async (req, res) => {
  *             properties:
  *               prompt:
  *                 type: string
- *                 description: Prompt for text generation
+ *                 example: "Write a short story about a robot learning to paint."
  *               maxLength:
  *                 type: number
- *                 description: Maximum length of generated text
- *                 default: 500
+ *                 example: 500
  *     responses:
  *       200:
- *         description: Successfully generated text
+ *         description: Generated text
  *       400:
  *         description: Bad request
  *       500:
@@ -150,33 +139,12 @@ router.post('/text-generation', async (req, res) => {
       return res.status(400).json({ error: 'Prompt is required' });
     }
     
-    // Simple rule-based text generation (simulating AI response)
-    const generateLocalText = (prompt, maxLength) => {
-      // Predefined responses for common prompts
-      const responses = {
-        'hello': 'Hello! How can I assist you today?',
-        'weather': 'The weather is currently sunny with a chance of clouds later.',
-        'help': 'I can help you with text generation, summarization, and script writing.',
-        'features': 'This API supports text analysis, script generation, text-to-speech, and more!'
-      };
-      
-      // Check if the prompt contains any keywords
-      for (const [key, value] of Object.entries(responses)) {
-        if (prompt.toLowerCase().includes(key)) {
-          return value;
-        }
-      }
-      
-      // Default response
-      const defaultResponse = `Thank you for your prompt: "${prompt}". This is a locally generated response without using external API calls. In a production environment, this would connect to an AI model like GPT-NeoX to generate more sophisticated responses tailored to your specific request.`;
-      
-      return defaultResponse.substring(0, maxLength);
-    };
+    // Generate text with AI
+    const text = await generateText(prompt, maxLength);
     
-    const generatedText = generateLocalText(prompt, maxLength);
-    res.json({ text: generatedText });
+    res.json({ text });
   } catch (error) {
-    console.error('Text generation error:', error);
+    console.error('Error generating text:', error);
     res.status(500).json({ error: 'Failed to generate text' });
   }
 });

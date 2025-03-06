@@ -1,12 +1,17 @@
 
-const fs = require('fs');
-const path = require('path');
-const AdmZip = require('adm-zip');
-const { v4: uuidv4 } = require('uuid');
-const tf = require('@tensorflow/tfjs-node');
-const axios = require('axios');
-const { Canvas, Image } = require('canvas');
-const fse = require('fs-extra');
+import fs from 'fs';
+import path from 'path';
+import AdmZip from 'adm-zip';
+import { v4 as uuidv4 } from 'uuid';
+import * as tf from '@tensorflow/tfjs-node';
+import axios from 'axios';
+import { Canvas, Image, registerFont } from 'canvas';
+import fse from 'fs-extra';
+import { fileURLToPath } from 'url';
+
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Initialize canvas
 const registerFonts = () => {
@@ -40,7 +45,6 @@ const registerFonts = () => {
       .then(() => {
         // Register font after successful download
         try {
-          const { registerFont } = require('canvas');
           registerFont(fontPath, { family: 'Roboto', weight: 'bold' });
           console.log('Font registered successfully');
         } catch (err) {
@@ -53,7 +57,6 @@ const registerFonts = () => {
   } else {
     // Register existing font
     try {
-      const { registerFont } = require('canvas');
       registerFont(fontPath, { family: 'Roboto', weight: 'bold' });
       console.log('Font registered successfully');
     } catch (err) {
@@ -205,7 +208,7 @@ function cleanupTempFiles(jobId) {
   }
 }
 
-module.exports = {
+export {
   generateThumbnails,
   cleanupTempFiles,
   loadModel
