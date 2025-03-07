@@ -11,7 +11,7 @@ import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
 import * as tf from '@tensorflow/tfjs-node';
 
-// Import routes using ES module syntax
+// Import routes
 import aiRoutes from './routes/aiRoutes.js';
 import textRoutes from './routes/textRoutes.js';
 import mediaRoutes from './routes/mediaRoutes.js';

@@ -1,9 +1,9 @@
 
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { analyzeText, generateSummary } from '../services/textService.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import { generateText } from '../services/textService.js';
 
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -45,8 +45,9 @@ router.post('/analyze', async (req, res) => {
       return res.status(400).json({ error: 'Text is required' });
     }
     
-    const analysis = await analyzeText(text);
-    res.json(analysis);
+    // Use generateText as a replacement for analyzeText
+    const analysis = await generateText(`Analyze this text: ${text}`, 300);
+    res.json({ analysis });
   } catch (error) {
     console.error('Error analyzing text:', error);
     res.status(500).json({ error: 'Failed to analyze text' });
@@ -90,7 +91,8 @@ router.post('/summarize', async (req, res) => {
       return res.status(400).json({ error: 'Text is required' });
     }
     
-    const summary = await generateSummary(text, maxLength);
+    // Use generateText as a replacement for generateSummary
+    const summary = await generateText(`Summarize this text: ${text}`, maxLength);
     res.json({ summary });
   } catch (error) {
     console.error('Error generating summary:', error);

@@ -4,7 +4,8 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import {
   summarizeText,
-  generateScript
+  generateScript,
+  generateText
 } from '../services/aiService.js';
 
 // Get __dirname equivalent for ES modules
@@ -47,7 +48,7 @@ router.post('/analyze', async (req, res) => {
       return res.status(400).json({ error: 'Text is required' });
     }
     
-    // Use summarizeText for analysis since analyzeText doesn't exist
+    // Use summarizeText for analysis
     const analysis = await summarizeText(text);
     
     res.json({ analysis });
@@ -138,8 +139,8 @@ router.post('/text-generation', async (req, res) => {
       return res.status(400).json({ error: 'Prompt is required' });
     }
     
-    // We'll use generateScript for now as a text generation function
-    const text = await generateScript(prompt);
+    // Generate text with AI
+    const text = await generateText(prompt, maxLength);
     
     res.json({ text });
   } catch (error) {

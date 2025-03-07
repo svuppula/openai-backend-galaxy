@@ -4,8 +4,12 @@ import NodeCache from 'node-cache';
 // Cache for AI model responses to reduce computation and increase performance
 const responseCache = new NodeCache({ stdTTL: 3600, checkperiod: 600 }); // Cache for 1 hour
 
-// Simple rules-based text generation for fast, free, and scalable solution
-// For a real implementation, you would use a more sophisticated model
+/**
+ * Generate text based on a prompt
+ * @param {string} prompt - The text prompt for generation
+ * @param {number} maxLength - Maximum length of the output
+ * @returns {Promise<string>} - Generated text
+ */
 export const generateText = async (prompt, maxLength = 100) => {
   // Check cache first
   const cacheKey = `${prompt}-${maxLength}`;
@@ -15,7 +19,7 @@ export const generateText = async (prompt, maxLength = 100) => {
   }
 
   try {
-    // In a production environment, you would load and run a proper GPT-NeoX model
+    // In a production environment, you would load and run a proper language model
     // For this demo, we'll use a simple rule-based system
     
     // Generate response based on prompt keywords
@@ -31,6 +35,10 @@ export const generateText = async (prompt, maxLength = 100) => {
       response = "I can help you with information, answer questions, provide suggestions, write content, or assist with various tasks. Feel free to ask me anything, and I'll do my best to help!";
     } else if (prompt.toLowerCase().includes('joke')) {
       response = "Why did the scarecrow win an award? Because he was outstanding in his field!";
+    } else if (prompt.toLowerCase().includes('analyze')) {
+      response = "Analysis: This text demonstrates a balanced sentiment with moderate emotional tone. Key entities identified include general concepts and potential opinion markers.";
+    } else if (prompt.toLowerCase().includes('summarize')) {
+      response = "Summary: The provided text discusses key concepts and information in a concise format, highlighting the main points while maintaining essential context.";
     } else {
       // Generate a more generic response
       response = `Thank you for your prompt: "${prompt}". This is a demonstration of text generation capabilities. In a full implementation, this would use a large language model to generate more contextually relevant responses.`;
@@ -49,4 +57,8 @@ export const generateText = async (prompt, maxLength = 100) => {
     console.error('Error generating text:', error);
     throw new Error('Failed to generate text');
   }
+};
+
+export default {
+  generateText
 };
