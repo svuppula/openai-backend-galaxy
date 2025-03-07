@@ -12,6 +12,7 @@ const App = () => {
   });
   const [voiceType, setVoiceType] = useState('free'); // 'free' or 'premium'
   const [selectedVoice, setSelectedVoice] = useState('en-US'); // Default free voice
+  const [imageCount, setImageCount] = useState(4); // Number of images to generate
   const [availableVoices, setAvailableVoices] = useState<{
     free: string[];
     premium: Record<string, string>;
@@ -109,7 +110,7 @@ const App = () => {
     handleApiRequest('text-to-speech', ttsData, 'tts');
   };
   
-  const handleGenerateImage = () => handleApiRequest('generate-image', { prompt: text }, 'image');
+  const handleGenerateImage = () => handleApiRequest('generate-image', { prompt: text, count: imageCount }, 'image');
   const handleGenerateVideo = () => handleApiRequest('generate-video', { prompt: text }, 'video');
   const handleGenerateAnimation = () => handleApiRequest('generate-animation', { prompt: text }, 'animation');
 
@@ -232,6 +233,25 @@ const App = () => {
             )}
           </div>
           
+          {/* Image generation options */}
+          <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+            <h3 className="text-lg font-medium mb-3">Image Generation Options</h3>
+            <div className="mb-3">
+              <label htmlFor="image-count" className="block text-sm font-medium mb-1">
+                Number of Images (1-10)
+              </label>
+              <input
+                id="image-count"
+                type="number"
+                min="1"
+                max="10"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                value={imageCount}
+                onChange={(e) => setImageCount(Math.min(10, Math.max(1, parseInt(e.target.value) || 1)))}
+              />
+            </div>
+          </div>
+          
           <div className="flex flex-wrap gap-4">
             <button
               className={`px-4 py-2 rounded-md ${loading.tts 
@@ -250,7 +270,7 @@ const App = () => {
               onClick={handleGenerateImage}
               disabled={loading.image || !text}
             >
-              {loading.image ? 'Generating...' : 'Generate YouTube Thumbnails'}
+              {loading.image ? 'Generating...' : `Generate ${imageCount} Images`}
             </button>
 
             <button
@@ -291,7 +311,7 @@ const App = () => {
         </p>
         <div className="text-sm text-gray-600 space-y-2">
           <p>• POST /api/media/text-to-speech - Convert text to speech (MP3)</p>
-          <p>• POST /api/media/generate-image - Generate YouTube thumbnails from text</p>
+          <p>• POST /api/media/generate-image - Generate images from text</p>
           <p>• POST /api/media/generate-video - Generate video content</p>
           <p>• POST /api/media/generate-animation - Generate animation content</p>
           <p>• POST /api/media/clone-voice - Clone a voice using local models</p>

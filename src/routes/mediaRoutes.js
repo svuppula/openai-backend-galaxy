@@ -1,182 +1,307 @@
+
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
 import fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import { generateThumbnails, loadModel } from '../utils/thumbnailGenerator.js';
-import { textToSpeech, getAvailableVoices, cloneVoice } from '../services/ttsService.js';
-
-// Get __dirname equivalent for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Setup file storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const tempDir = path.join(__dirname, '../../temp');
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-    cb(null, tempDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${uuidv4()}-${file.originalname}`);
-  }
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB limit
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = [
-      'image/jpeg', 
-      'image/png', 
-      'image/gif', 
-      'video/mp4', 
-      'audio/mpeg', 
-      'audio/wav'
-    ];
-    
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type.'));
-    }
-  }
-});
+import path from 'path';
+import { generateThumbnail } from '../utils/thumbnailGenerator.js';
+import { textToSpeech, getAvailableVoices } from '../services/ttsService.js';
+import { generateVideo, generateAnimation } from '../services/mediaServiceImpl.js';
+import { generateImagesFromText } from '../services/imageGenerationService.js';
 
 const router = express.Router();
 
-// Clean up temp files periodically
-const cleanupTempFiles = () => {
-  const tempDir = path.join(__dirname, '../../temp');
-  if (fs.existsSync(tempDir)) {
-    fs.readdir(tempDir, (err, files) => {
-      if (err) {
-        console.error('Error reading temp directory:', err);
-        return;
-      }
-      
-      // Only delete files older than 1 hour
-      const oneHourAgo = Date.now() - (60 * 60 * 1000);
-      
-      files.forEach(file => {
-        if (file === '.gitkeep') return; // Keep the gitkeep file
-        
-        const filePath = path.join(tempDir, file);
-        fs.stat(filePath, (err, stats) => {
-          if (err) {
-            console.error(`Error getting stats for file ${file}:`, err);
-            return;
-          }
-          
-          if (stats.isFile() && stats.mtimeMs < oneHourAgo) {
-            fs.unlink(filePath, (err) => {
-              if (err) {
-                console.error(`Error deleting file ${file}:`, err);
-              }
-            });
-          }
-        });
-      });
-    });
-  }
-};
+// Set up multer for handling multipart/form-data
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
-// Run cleanup every hour
-setInterval(cleanupTempFiles, 60 * 60 * 1000);
-
-router.post('/tts', async (req, res) => {
+/**
+ * @swagger
+ * /api/media/text-to-speech:
+ *   post:
+ *     summary: Convert text to speech
+ *     description: Converts the provided text to speech using TTS
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - text
+ *             properties:
+ *               text:
+ *                 type: string
+ *               voice:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Audio file as attachment
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Server error
+ */
+router.post('/text-to-speech', async (req, res) => {
   try {
-    const { text, voice = 'en-US', speed = 1.0 } = req.body;
+    const { text, voice } = req.body;
     
     if (!text) {
       return res.status(400).json({ error: 'Text is required' });
     }
     
-    const audioPath = await textToSpeech(text, voice, speed);
+    const outputPath = await textToSpeech(text, voice);
     
-    // Return the URL to the generated audio file
-    const audioUrl = `/media/audio/${path.basename(audioPath)}`;
-    res.json({ audioUrl });
+    res.download(outputPath, 'speech.zip', (err) => {
+      if (err) {
+        console.error('Error sending file:', err);
+        res.status(500).json({ error: 'Failed to send file' });
+      }
+      
+      // Clean up the file after sending
+      fs.unlink(outputPath, (unlinkErr) => {
+        if (unlinkErr) console.error('Error deleting file:', unlinkErr);
+      });
+    });
   } catch (error) {
-    console.error('Error in text-to-speech:', error);
-    res.status(500).json({ error: 'Failed to convert text to speech' });
+    console.error('Text-to-speech error:', error);
+    res.status(500).json({ error: error.message || 'Failed to process text-to-speech' });
   }
 });
 
-router.get('/voices', async (req, res) => {
+/**
+ * @swagger
+ * /api/media/available-voices:
+ *   get:
+ *     summary: Get available voices
+ *     description: Returns a list of available voices for text-to-speech
+ *     responses:
+ *       200:
+ *         description: List of available voices
+ *       500:
+ *         description: Server error
+ */
+router.get('/available-voices', async (req, res) => {
   try {
     const voices = await getAvailableVoices();
-    res.json({ voices });
+    res.json(voices);
   } catch (error) {
-    console.error('Error getting available voices:', error);
-    res.status(500).json({ error: 'Failed to get available voices' });
+    console.error('Error fetching voices:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch available voices' });
   }
 });
 
-router.get('/audio/:filename', (req, res) => {
-  const filename = req.params.filename;
-  const filepath = path.join(__dirname, '../../temp', filename);
-  
-  if (!fs.existsSync(filepath)) {
-    return res.status(404).json({ error: 'Audio file not found' });
-  }
-  
-  res.sendFile(filepath);
-});
-
-router.post('/generate-thumbnails', upload.single('image'), async (req, res) => {
+/**
+ * @swagger
+ * /api/media/generate-image:
+ *   post:
+ *     summary: Generate images from text prompt
+ *     description: Generates realistic images based on the text prompt
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - prompt
+ *             properties:
+ *               prompt:
+ *                 type: string
+ *               count:
+ *                 type: number
+ *                 default: 4
+ *     responses:
+ *       200:
+ *         description: Zip file containing generated images
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Server error
+ */
+router.post('/generate-image', async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'Image file is required' });
+    const { prompt, count = 4 } = req.body;
+    
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
     }
     
-    // Load the model first
-    await loadModel();
+    // Limit the number of images per request for resource management
+    const numImages = Math.min(Math.max(1, count), 10);
     
-    // Generate thumbnails with image recognition
-    const thumbnails = await generateThumbnails(req.file.path);
+    console.log(`Generating ${numImages} images for prompt: "${prompt}"`);
+    const zipPath = await generateImagesFromText(prompt, numImages);
     
-    res.json({ thumbnails });
+    res.download(zipPath, 'generated_images.zip', (err) => {
+      if (err) {
+        console.error('Error sending file:', err);
+        res.status(500).json({ error: 'Failed to send file' });
+      }
+      
+      // Clean up the file after sending
+      fs.unlink(zipPath, (unlinkErr) => {
+        if (unlinkErr) console.error('Error deleting file:', unlinkErr);
+      });
+    });
   } catch (error) {
-    console.error('Error generating thumbnails:', error);
-    res.status(500).json({ error: 'Failed to generate thumbnails' });
+    console.error('Image generation error:', error);
+    res.status(500).json({ error: error.message || 'Failed to generate images' });
   }
 });
 
-router.get('/thumbnail/:filename', (req, res) => {
-  const filename = req.params.filename;
-  const filepath = path.join(__dirname, '../../temp', filename);
-  
-  if (!fs.existsSync(filepath)) {
-    return res.status(404).json({ error: 'Thumbnail not found' });
-  }
-  
-  res.sendFile(filepath);
-});
-
-// Add a route for voice cloning
-router.post('/clone-voice', upload.single('audio_sample'), async (req, res) => {
+/**
+ * @swagger
+ * /api/media/generate-thumbnail:
+ *   post:
+ *     summary: Generate YouTube thumbnails
+ *     description: Generates YouTube thumbnails based on the text prompt
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - prompt
+ *             properties:
+ *               prompt:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Zip file containing generated thumbnails
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Server error
+ */
+router.post('/generate-thumbnail', async (req, res) => {
   try {
-    const { name } = req.body;
+    const { prompt } = req.body;
     
-    if (!name) {
-      return res.status(400).json({ error: 'Voice name is required' });
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
     }
     
-    if (!req.file) {
-      return res.status(400).json({ error: 'Audio sample is required' });
-    }
+    const outputPath = await generateThumbnail(prompt);
     
-    const result = await cloneVoice(name, req.file.path);
-    
-    res.status(201).json(result);
+    res.download(outputPath, 'thumbnails.zip', (err) => {
+      if (err) {
+        console.error('Error sending file:', err);
+        res.status(500).json({ error: 'Failed to send file' });
+      }
+      
+      // Clean up the file after sending
+      fs.unlink(outputPath, (unlinkErr) => {
+        if (unlinkErr) console.error('Error deleting file:', unlinkErr);
+      });
+    });
   } catch (error) {
-    console.error('Error cloning voice:', error);
-    res.status(500).json({ error: 'Failed to clone voice' });
+    console.error('Thumbnail generation error:', error);
+    res.status(500).json({ error: error.message || 'Failed to generate thumbnails' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/media/generate-video:
+ *   post:
+ *     summary: Generate video content
+ *     description: Generates video content based on the text prompt
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - prompt
+ *             properties:
+ *               prompt:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Zip file containing generated video
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Server error
+ */
+router.post('/generate-video', async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+    
+    const outputPath = await generateVideo(prompt);
+    
+    res.download(outputPath, 'video.zip', (err) => {
+      if (err) {
+        console.error('Error sending file:', err);
+        res.status(500).json({ error: 'Failed to send file' });
+      }
+      
+      // Clean up the file after sending
+      fs.unlink(outputPath, (unlinkErr) => {
+        if (unlinkErr) console.error('Error deleting file:', unlinkErr);
+      });
+    });
+  } catch (error) {
+    console.error('Video generation error:', error);
+    res.status(500).json({ error: error.message || 'Failed to generate video' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/media/generate-animation:
+ *   post:
+ *     summary: Generate animation content
+ *     description: Generates animation content based on the text prompt
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - prompt
+ *             properties:
+ *               prompt:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Zip file containing generated animation
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Server error
+ */
+router.post('/generate-animation', async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+    
+    const outputPath = await generateAnimation(prompt);
+    
+    res.download(outputPath, 'animation.zip', (err) => {
+      if (err) {
+        console.error('Error sending file:', err);
+        res.status(500).json({ error: 'Failed to send file' });
+      }
+      
+      // Clean up the file after sending
+      fs.unlink(outputPath, (unlinkErr) => {
+        if (unlinkErr) console.error('Error deleting file:', unlinkErr);
+      });
+    });
+  } catch (error) {
+    console.error('Animation generation error:', error);
+    res.status(500).json({ error: error.message || 'Failed to generate animation' });
   }
 });
 

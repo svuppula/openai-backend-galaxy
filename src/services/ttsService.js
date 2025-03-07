@@ -1,143 +1,113 @@
 
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import AdmZip from 'adm-zip';
+import gtts from 'node-gtts';
 
-// Get __dirname equivalent for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Environment variable or default temp directory
+const tempDir = process.env.TEMP_DIR || '/tmp';
 
-// We'll need to use dynamic import for gtts since it might be CommonJS
-let gtts;
-import('node-gtts').then(module => {
-  gtts = module.default;
-}).catch(err => {
-  console.error('Error loading gtts module:', err);
-});
-
-// Available voices cache
-let voicesCache = null;
-
-// Get available voices
-export async function getAvailableVoices() {
-  if (voicesCache) {
-    return voicesCache;
+/**
+ * Converts text to speech and returns the path to the generated audio file
+ * @param {string} text - The text to convert to speech
+ * @param {string} voice - The voice to use (language code for free voices, voice ID for premium)
+ * @returns {Promise<string>} - Path to the generated audio file
+ */
+export const textToSpeech = async (text, voice = 'en-US') => {
+  try {
+    // Create a unique ID for this TTS request
+    const requestId = uuidv4();
+    const outputDir = path.join(tempDir, requestId);
+    const outputFile = path.join(outputDir, 'speech.mp3');
+    const zipFile = path.join(tempDir, `${requestId}.zip`);
+    
+    // Create the output directory if it doesn't exist
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+    
+    // Determine if this is a free voice (language code) or a premium/cloned voice
+    if (voice.includes('-')) {
+      // This is a free voice using gtts
+      const language = voice.split('-')[0].toLowerCase();
+      const tts = gtts(language);
+      
+      console.log(`Generating speech using free TTS (language: ${language})`);
+      
+      // Convert text to speech (returns a promise)
+      await new Promise((resolve, reject) => {
+        tts.save(outputFile, text, (err) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
+      });
+    } else {
+      // This is a premium or cloned voice
+      // We'll just use the free TTS for now as a fallback
+      const tts = gtts('en');
+      
+      console.log(`Using fallback TTS for voice ID: ${voice}`);
+      
+      // Convert text to speech (returns a promise)
+      await new Promise((resolve, reject) => {
+        tts.save(outputFile, text, (err) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
+      });
+    }
+    
+    // Create a ZIP file containing the audio
+    const zip = new AdmZip();
+    zip.addLocalFile(outputFile);
+    zip.writeZip(zipFile);
+    
+    // Clean up the temporary output directory
+    fs.unlinkSync(outputFile);
+    fs.rmdirSync(outputDir);
+    
+    return zipFile;
+  } catch (error) {
+    console.error('Error in textToSpeech:', error);
+    throw new Error(`Failed to convert text to speech: ${error.message}`);
   }
+};
+
+/**
+ * Returns the available voices for text-to-speech
+ * @returns {Promise<Object>} - Object containing free and premium voices
+ */
+export const getAvailableVoices = async () => {
+  // Free voices are language codes
+  const freeVoices = ['en-US', 'en-GB', 'fr-FR', 'de-DE', 'es-ES', 'it-IT', 'ja-JP', 'ko-KR', 'pt-BR', 'ru-RU', 'zh-CN'];
   
-  // Free voices (based on node-gtts supported languages)
-  const freeVoices = [
-    'en', 'en-us', 'en-gb', 'en-au', 'en-ca', 'en-in', 'en-za', 
-    'fr', 'fr-ca', 'fr-fr', 
-    'de', 'de-de', 
-    'es', 'es-es', 'es-mx', 
-    'it', 'ja', 'ko', 'nl', 'pl', 'pt', 'pt-br', 'ru', 'zh-cn', 'zh-tw'
-  ];
-  
-  // Premium voices
+  // Premium voices are key-value pairs (name: ID)
   const premiumVoices = {
     'American Male': 'en-us-male',
     'American Female': 'en-us-female',
     'British Male': 'en-gb-male',
     'British Female': 'en-gb-female',
-    'Australian Male': 'en-au-male',
-    'Australian Female': 'en-au-female',
-    'Indian Male': 'en-in-male',
-    'Indian Female': 'en-in-female',
     'French Male': 'fr-fr-male',
     'French Female': 'fr-fr-female',
     'German Male': 'de-de-male',
     'German Female': 'de-de-female',
     'Spanish Male': 'es-es-male',
-    'Spanish Female': 'es-es-female',
-    'Italian Male': 'it-male',
-    'Italian Female': 'it-female',
-    'Japanese Male': 'ja-male',
-    'Japanese Female': 'ja-female'
+    'Spanish Female': 'es-es-female'
   };
   
-  // Cloned voices (would be populated by real implementation)
-  const clonedVoices = {
-    'Demo Voice 1': 'cloned-voice-1',
-    'Demo Voice 2': 'cloned-voice-2'
-  };
+  // Cloned voices would be populated dynamically if we had a real voice cloning service
+  const clonedVoices = {};
   
-  voicesCache = {
+  return {
     free: freeVoices,
     premium: premiumVoices,
     cloned: clonedVoices
   };
-  
-  return voicesCache;
-}
-
-// TTS function
-export async function textToSpeech(text, voice = 'en', sessionId) {
-  return new Promise((resolve, reject) => {
-    try {
-      if (!gtts) {
-        reject(new Error('TTS module not yet loaded'));
-        return;
-      }
-
-      // If voice is from premium or cloned category, extract the language
-      let language = voice;
-      if (voice.includes('-male') || voice.includes('-female')) {
-        language = voice.split('-').slice(0, -1).join('-');
-      } else if (voice.startsWith('cloned-')) {
-        // For cloned voices, use English as fallback
-        language = 'en';
-      }
-      
-      // Create gtts instance with the language
-      const tts = gtts(language || 'en');
-      
-      // Create directory if it doesn't exist
-      const tempDir = path.join(__dirname, '../../temp');
-      if (!fs.existsSync(tempDir)) {
-        fs.mkdirSync(tempDir, { recursive: true });
-      }
-      
-      // Generate a unique filename
-      const filename = `tts-${sessionId || uuidv4()}.mp3`;
-      const outputPath = path.join(tempDir, filename);
-      
-      // Generate speech file
-      tts.save(outputPath, text, (err) => {
-        if (err) {
-          console.error('Error generating speech:', err);
-          reject(err);
-        } else {
-          resolve(outputPath);
-        }
-      });
-    } catch (error) {
-      console.error('Error in textToSpeech:', error);
-      reject(error);
-    }
-  });
-}
-
-// Voice cloning simulation function
-export async function cloneVoice(name, audioSample) {
-  // This is a mock implementation
-  // In a real scenario, this would use a voice cloning ML model
-  
-  // Generate a unique ID for the cloned voice
-  const voiceId = `cloned-voice-${uuidv4().slice(0, 8)}`;
-  
-  // Add the cloned voice to the cache
-  if (!voicesCache) {
-    await getAvailableVoices();
-  }
-  
-  voicesCache.cloned[name] = voiceId;
-  
-  return {
-    success: true,
-    name,
-    voiceId,
-    message: `Voice "${name}" has been successfully cloned`
-  };
-}
+};
