@@ -1,64 +1,88 @@
 
-import NodeCache from 'node-cache';
-
-// Cache for AI model responses to reduce computation and increase performance
-const responseCache = new NodeCache({ stdTTL: 3600, checkperiod: 600 }); // Cache for 1 hour
+import axios from 'axios';
 
 /**
- * Generate text based on a prompt
- * @param {string} prompt - The text prompt for generation
- * @param {number} maxLength - Maximum length of the output
- * @returns {Promise<string>} - Generated text
+ * Summarizes text using an AI service
+ * @param {string} text - Text to summarize
+ * @param {number} maxLength - Maximum length of summary
+ * @returns {Promise<string>} - The generated summary
  */
-export const generateText = async (prompt, maxLength = 100) => {
-  // Check cache first
-  const cacheKey = `${prompt}-${maxLength}`;
-  const cachedResponse = responseCache.get(cacheKey);
-  if (cachedResponse) {
-    return cachedResponse;
-  }
-
+export async function summarizeText(text, maxLength = 100) {
   try {
-    // In a production environment, you would load and run a proper language model
-    // For this demo, we'll use a simple rule-based system
+    // In a real implementation, you would call an external AI API or use a local model
+    // For this mock implementation, we'll generate a simple summary
     
-    // Generate response based on prompt keywords
-    let response = '';
+    const words = text.split(' ');
+    let summary = '';
     
-    if (prompt.toLowerCase().includes('hello') || prompt.toLowerCase().includes('hi')) {
-      response = "Hello! How can I assist you today? I'm a text generation model that can help answer questions, provide information, or just chat with you.";
-    } else if (prompt.toLowerCase().includes('weather')) {
-      response = "I don't have real-time data to check the current weather conditions. For accurate weather information, I recommend checking a weather service or app that provides current forecasts for your specific location.";
-    } else if (prompt.toLowerCase().includes('recipe') || prompt.toLowerCase().includes('cook')) {
-      response = "Here's a simple pasta recipe: Cook your favorite pasta according to package instructions. In a pan, sauté garlic in olive oil, add diced tomatoes, salt, pepper, and basil. Mix with cooked pasta and top with parmesan cheese.";
-    } else if (prompt.toLowerCase().includes('help') || prompt.toLowerCase().includes('assist')) {
-      response = "I can help you with information, answer questions, provide suggestions, write content, or assist with various tasks. Feel free to ask me anything, and I'll do my best to help!";
-    } else if (prompt.toLowerCase().includes('joke')) {
-      response = "Why did the scarecrow win an award? Because he was outstanding in his field!";
-    } else if (prompt.toLowerCase().includes('analyze')) {
-      response = "Analysis: This text demonstrates a balanced sentiment with moderate emotional tone. Key entities identified include general concepts and potential opinion markers.";
-    } else if (prompt.toLowerCase().includes('summarize')) {
-      response = "Summary: The provided text discusses key concepts and information in a concise format, highlighting the main points while maintaining essential context.";
+    if (words.length <= maxLength) {
+      summary = text;
     } else {
-      // Generate a more generic response
-      response = `Thank you for your prompt: "${prompt}". This is a demonstration of text generation capabilities. In a full implementation, this would use a large language model to generate more contextually relevant responses.`;
-    }
-
-    // Ensure we don't exceed maxLength
-    if (response.length > maxLength) {
-      response = response.substring(0, maxLength) + '...';
+      // Extract first few sentences as a simple summary
+      const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+      let currentLength = 0;
+      const selectedSentences = [];
+      
+      for (const sentence of sentences) {
+        const wordCount = sentence.split(' ').length;
+        if (currentLength + wordCount <= maxLength) {
+          selectedSentences.push(sentence.trim());
+          currentLength += wordCount;
+        } else {
+          break;
+        }
+      }
+      
+      summary = selectedSentences.join(' ');
     }
     
-    // Cache the response
-    responseCache.set(cacheKey, response);
-    
-    return response;
+    return summary;
   } catch (error) {
-    console.error('Error generating text:', error);
-    throw new Error('Failed to generate text');
+    console.error('Error in summarizeText:', error);
+    throw new Error('Failed to generate summary');
   }
-};
+}
 
-export default {
-  generateText
-};
+/**
+ * Extracts keywords from text
+ * @param {string} text - Text to extract keywords from
+ * @param {number} maxKeywords - Maximum number of keywords to extract
+ * @returns {Promise<string[]>} - Array of extracted keywords
+ */
+export async function generateKeywords(text, maxKeywords = 5) {
+  try {
+    // In a real implementation, you would use NLP techniques or an external API
+    // For this mock implementation, we'll just extract common words
+    
+    // Remove punctuation and convert to lowercase
+    const cleanText = text.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '');
+    
+    // Split into words
+    const words = cleanText.split(/\s+/);
+    
+    // Filter out common stop words
+    const stopWords = ['the', 'a', 'an', 'and', 'or', 'but', 'is', 'are', 'was', 'were', 
+      'in', 'on', 'at', 'to', 'for', 'with', 'by', 'about', 'as', 'of', 'from'];
+    
+    const filteredWords = words.filter(word => 
+      word.length > 2 && !stopWords.includes(word)
+    );
+    
+    // Count word frequencies
+    const wordCounts = {};
+    filteredWords.forEach(word => {
+      wordCounts[word] = (wordCounts[word] || 0) + 1;
+    });
+    
+    // Sort by frequency
+    const sortedWords = Object.entries(wordCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(entry => entry[0]);
+    
+    // Return top keywords
+    return sortedWords.slice(0, maxKeywords);
+  } catch (error) {
+    console.error('Error in generateKeywords:', error);
+    throw new Error('Failed to extract keywords');
+  }
+}

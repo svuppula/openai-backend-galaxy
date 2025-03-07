@@ -1,21 +1,14 @@
 
 import express from 'express';
-import { v4 as uuidv4 } from 'uuid';
-import { fileURLToPath } from 'url';
-import path from 'path';
-import { generateText } from '../services/textService.js';
-
-// Get __dirname equivalent for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { summarizeText, generateKeywords } from '../services/textService.js';
 
 const router = express.Router();
 
 /**
  * @swagger
- * /api/text/analyze:
+ * /text/summarize:
  *   post:
- *     summary: Analyze text for sentiment and entities
+ *     summary: Generate a summary from text
  *     tags: [Text]
  *     requestBody:
  *       required: true
@@ -28,56 +21,13 @@ const router = express.Router();
  *             properties:
  *               text:
  *                 type: string
- *                 example: "I love this product! It's amazing and the customer service is great."
- *     responses:
- *       200:
- *         description: Analysis results
- *       400:
- *         description: Bad request
- *       500:
- *         description: Server error
- */
-router.post('/analyze', async (req, res) => {
-  try {
-    const { text } = req.body;
-    
-    if (!text) {
-      return res.status(400).json({ error: 'Text is required' });
-    }
-    
-    // Use generateText as a replacement for analyzeText
-    const analysis = await generateText(`Analyze this text: ${text}`, 300);
-    res.json({ analysis });
-  } catch (error) {
-    console.error('Error analyzing text:', error);
-    res.status(500).json({ error: 'Failed to analyze text' });
-  }
-});
-
-/**
- * @swagger
- * /api/text/summarize:
- *   post:
- *     summary: Generate a summary of provided text
- *     tags: [Text]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - text
- *             properties:
- *               text:
- *                 type: string
- *                 example: "Long article or text to summarize..."
+ *                 example: "Long text to be summarized..."
  *               maxLength:
  *                 type: number
- *                 example: 150
+ *                 example: 100
  *     responses:
  *       200:
- *         description: Summary results
+ *         description: Generated summary
  *       400:
  *         description: Bad request
  *       500:
@@ -85,18 +35,62 @@ router.post('/analyze', async (req, res) => {
  */
 router.post('/summarize', async (req, res) => {
   try {
-    const { text, maxLength = 150 } = req.body;
+    const { text, maxLength = 100 } = req.body;
     
     if (!text) {
       return res.status(400).json({ error: 'Text is required' });
     }
     
-    // Use generateText as a replacement for generateSummary
-    const summary = await generateText(`Summarize this text: ${text}`, maxLength);
+    const summary = await summarizeText(text, maxLength);
     res.json({ summary });
   } catch (error) {
     console.error('Error generating summary:', error);
     res.status(500).json({ error: 'Failed to generate summary' });
+  }
+});
+
+/**
+ * @swagger
+ * /text/keywords:
+ *   post:
+ *     summary: Extract keywords from text
+ *     tags: [Text]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - text
+ *             properties:
+ *               text:
+ *                 type: string
+ *                 example: "Text to extract keywords from..."
+ *               maxKeywords:
+ *                 type: number
+ *                 example: 5
+ *     responses:
+ *       200:
+ *         description: Extracted keywords
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Server error
+ */
+router.post('/keywords', async (req, res) => {
+  try {
+    const { text, maxKeywords = 5 } = req.body;
+    
+    if (!text) {
+      return res.status(400).json({ error: 'Text is required' });
+    }
+    
+    const keywords = await generateKeywords(text, maxKeywords);
+    res.json({ keywords });
+  } catch (error) {
+    console.error('Error extracting keywords:', error);
+    res.status(500).json({ error: 'Failed to extract keywords' });
   }
 });
 

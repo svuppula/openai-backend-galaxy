@@ -1,14 +1,27 @@
 
-const fs = require('fs');
-const path = require('path');
-const gtts = require('node-gtts');
-const { v4: uuidv4 } = require('uuid');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import { v4 as uuidv4 } from 'uuid';
+
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// We'll need to use dynamic import for gtts since it might be CommonJS
+let gtts;
+import('node-gtts').then(module => {
+  gtts = module.default;
+}).catch(err => {
+  console.error('Error loading gtts module:', err);
+});
 
 // Available voices cache
 let voicesCache = null;
 
 // Get available voices
-async function getAvailableVoices() {
+export async function getAvailableVoices() {
   if (voicesCache) {
     return voicesCache;
   }
@@ -60,9 +73,14 @@ async function getAvailableVoices() {
 }
 
 // TTS function
-async function textToSpeech(text, voice = 'en', sessionId) {
+export async function textToSpeech(text, voice = 'en', sessionId) {
   return new Promise((resolve, reject) => {
     try {
+      if (!gtts) {
+        reject(new Error('TTS module not yet loaded'));
+        return;
+      }
+
       // If voice is from premium or cloned category, extract the language
       let language = voice;
       if (voice.includes('-male') || voice.includes('-female')) {
@@ -102,7 +120,7 @@ async function textToSpeech(text, voice = 'en', sessionId) {
 }
 
 // Voice cloning simulation function
-async function cloneVoice(name, audioSample) {
+export async function cloneVoice(name, audioSample) {
   // This is a mock implementation
   // In a real scenario, this would use a voice cloning ML model
   
@@ -123,9 +141,3 @@ async function cloneVoice(name, audioSample) {
     message: `Voice "${name}" has been successfully cloned`
   };
 }
-
-module.exports = {
-  textToSpeech,
-  getAvailableVoices,
-  cloneVoice
-};
