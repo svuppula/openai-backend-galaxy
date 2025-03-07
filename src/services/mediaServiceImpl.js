@@ -99,9 +99,3 @@ const extractKeywords = (prompt) => {
   const defaultKeywords = ['nature', 'landscape', 'mountains', 'forest', 'scenic'];
   return keywords.length >= 3 ? keywords.slice(0, 5) : [...keywords, ...defaultKeywords].slice(0, 5);
 };
-
-// Export the new functions alongside the existing ones
-export {
-  generateVideo,
-  generateAnimation
-};

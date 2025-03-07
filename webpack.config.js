@@ -44,7 +44,7 @@ module.exports = {
         ]
       },
       {
-        test: /\.ts$/,
+        test: /\.ts$|\.tsx$/,
         exclude: /node_modules/,
         use: [
           {
@@ -58,7 +58,7 @@ module.exports = {
     ]
   },
   resolve: {
-    extensions: ['.ts', '.js']
+    extensions: ['.ts', '.tsx', '.js', '.jsx']
   },
   output: {
     libraryTarget: 'commonjs2',
