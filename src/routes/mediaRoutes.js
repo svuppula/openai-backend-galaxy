@@ -50,7 +50,7 @@ const upload = multer({
 
 const router = express.Router();
 
-// Clean up temp files periodically (you can implement this function)
+// Clean up temp files periodically
 const cleanupTempFiles = () => {
   const tempDir = path.join(__dirname, '../../temp');
   if (fs.existsSync(tempDir)) {

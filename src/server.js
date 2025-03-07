@@ -4,87 +4,78 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
-import swaggerUi from 'swagger-ui-express';
-import swaggerJsDoc from 'swagger-jsdoc';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import rateLimit from 'express-rate-limit';
-import * as tf from '@tensorflow/tfjs-node';
+import { dirname } from 'path';
+import swaggerJsDoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
+import serverless from 'serverless-http';
 
 // Import routes
-import aiRoutes from './routes/aiRoutes.js';
 import textRoutes from './routes/textRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 import mediaRoutes from './routes/mediaRoutes.js';
 
-// Get __dirname equivalent for ES modules
+// ESM __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = dirname(__filename);
 
-// Initialize Express
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(helmet({
-  contentSecurityPolicy: false // Disable for Swagger UI
-}));
+app.use(helmet());
 app.use(compression());
-app.use(morgan('common'));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
-
-// Rate limiting - 100 requests per minute
-const apiLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 100, // 100 requests per window
-  standardHeaders: true,
-  message: { error: 'Too many requests, please try again later.' }
-});
-
-// Apply rate limiting to API routes
-app.use('/api', apiLimiter);
+app.use(morgan('tiny'));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Swagger configuration
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Collaborators World API',
+      title: 'AI Tools API',
       version: '1.0.0',
-      description: 'API for text generation, summarization, text-to-speech, and media generation'
+      description: 'API for various AI text and media processing tools',
     },
     servers: [
       {
         url: 'http://localhost:3000',
-        description: 'Development server'
-      }
-    ]
+        description: 'Development server',
+      },
+    ],
   },
-  apis: ['./src/routes/*.js']
+  apis: ['./src/routes/*.js'], // path to the API docs
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // Routes
-app.use('/api/ai', aiRoutes);
-app.use('/api/text', textRoutes);
-app.use('/api/media', mediaRoutes);
+app.use('/text', textRoutes);
+app.use('/ai', aiRoutes);
+app.use('/media', mediaRoutes);
 
-// Global error handler
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
+// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Start server or export for serverless
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    console.log(`Swagger docs available at http://localhost:${PORT}/api-docs`);
+  });
+}
 
-// For AWS Lambda handler with serverless-http
-import serverless from 'serverless-http';
 export const handler = serverless(app);
-
 export default app;
